@@ -1,0 +1,41 @@
+@* ---------- 📝 Educational Content view ---------- *@
+
+<div class="section-label">📝 محتوای آموزشی</div>
+<h2>محتوای آموزشی موضوع</h2>
+
+<h3>توضیح ساده</h3>
+<p>@Content.SimpleExplanation</p>
+
+<h3>مفاهیم کلیدی</h3>
+<ul>
+    @foreach (var k in Content.KeyConcepts)
+    {
+        <li>@k</li>
+    }
+</ul>
+
+<h3>مثال‌ها</h3>
+<ul>
+    @foreach (var e in Content.Examples)
+    {
+        <li>@e</li>
+    }
+</ul>
+
+<h3>تصورات غلط رایج دانش‌آموزان</h3>
+<ul>
+    @foreach (var m in Content.CommonMisconceptions)
+    {
+        <li>@m</li>
+    }
+</ul>
+
+<h3>مثالی از دنیای واقعی</h3>
+<p>@Content.RealWorldExample</p>
+
+<h3>خلاصه</h3>
+<p><b>@Content.Summary</b></p>
+
+@code {
+    [Parameter, EditorRequired] public EducationalContentDto Content { get; set; } = null!;
+}

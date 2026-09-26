@@ -1,0 +1,26 @@
+@inherits LayoutComponentBase
+
+<div class="app-shell">
+    <header class="top-nav">
+        <NavLink class="brand" href="/">
+            <span class="brand-icon">🎓</span>
+            <span class="brand-name">مدرس‌یار</span>
+            <span class="brand-sub">دستیار هوشمند معلم</span>
+        </NavLink>
+
+        <nav class="nav-links">
+            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All"><span>🏠</span> خانه</NavLink>
+            <NavLink class="nav-link" href="/lessons"><span>📚</span> درس‌های من</NavLink>
+            <NavLink class="nav-link" href="/lessons/new"><span>✨</span> ساخت محتوای جدید</NavLink>
+            <NavLink class="nav-link" href="/profile"><span>👤</span> پروفایل</NavLink>
+        </nav>
+    </header>
+
+    <main class="page">
+        @Body
+    </main>
+
+    <footer class="footer">
+        مدرس‌یار — دستیار هوشمند معلم — نسخه آزمایشی برای معلمان
+    </footer>
+</div>

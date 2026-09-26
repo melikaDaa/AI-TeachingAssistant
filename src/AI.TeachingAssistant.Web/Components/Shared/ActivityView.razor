@@ -1,0 +1,33 @@
+@* ---------- 🎯 Classroom Activity view ---------- *@
+
+<div class="section-label">🎯 فعالیت کلاسی</div>
+<h2>@Activity.Title</h2>
+<p class="page-sub">@Activity.Objective</p>
+
+<ul>
+    <li><b>تعداد دانش‌آموزان:</b> @Activity.StudentCount</li>
+    <li><b>مدت فعالیت:</b> @Activity.DurationMinutes.ToPersianDigits() دقیقه</li>
+</ul>
+
+<h3>وسایل لازم</h3>
+<ul>
+    @foreach (var m in Activity.Materials)
+    {
+        <li>@m</li>
+    }
+</ul>
+
+<h3>دستورالعمل اجرا</h3>
+<ol>
+    @foreach (var step in Activity.Instructions)
+    {
+        <li>@step</li>
+    }
+</ol>
+
+<h3>نتیجه مورد انتظار</h3>
+<p>@Activity.ExpectedResult</p>
+
+@code {
+    [Parameter, EditorRequired] public ActivityDto Activity { get; set; } = null!;
+}

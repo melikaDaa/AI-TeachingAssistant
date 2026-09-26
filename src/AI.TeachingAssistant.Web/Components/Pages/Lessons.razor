@@ -1,0 +1,86 @@
+@page "/lessons"
+@inject MadreseAIApiClient Api
+
+<PageTitle>مدرس‌یار — درس‌های من</PageTitle>
+
+<div class="page-head">
+    <div class="grow">
+        <h1>📚 درس‌های من</h1>
+        <p class="page-sub">آرشیو کلاس‌هایی که با کمک مدرس‌یار آماده کرده‌اید.</p>
+    </div>
+    <a class="btn" href="/lessons/new">✨ ساخت محتوای جدید</a>
+</div>
+
+@if (_error is not null)
+{
+    <div class="error-banner">@_error</div>
+}
+
+@if (_lessons is null)
+{
+    <div class="empty"><span class="big">⏳</span>در حال بارگذاری...</div>
+}
+else if (_lessons.Count == 0)
+{
+    <div class="empty">
+        <span class="big">🌱</span>
+        <h2>هنوز کلاسی آماده نکرده‌اید</h2>
+        <p>اولین محتوای کلاس خود را با کمک مدرس‌یار بسازید.</p>
+        <a class="btn" href="/lessons/new">✨ ساخت اولین محتوا</a>
+    </div>
+}
+else
+{
+    <div class="grid grid-2">
+        @foreach (var lesson in _lessons)
+        {
+            <div class="lesson-card">
+                <h3>@lesson.Title</h3>
+                <div class="meta">
+                    <span>📗 @lesson.Subject</span>
+                    <span>🧩 @lesson.Topic</span>
+                    <span>🎓 پایه @lesson.Grade</span>
+                    <span>📅 @lesson.CreatedAt.PersianDate()</span>
+                </div>
+                <div class="card-foot">
+                    <span class="badge @DtoMapper.StatusKey(lesson.Status)">@PersianText.StatusLabel(DtoMapper.StatusKey(lesson.Status))</span>
+                    <div class="actions">
+                        <a class="btn small" href="@($"/lessons/{lesson.Id}")">مشاهده</a>
+                        <button type="button" class="link-danger" @onclick="() => DeleteAsync(lesson.Id)">حذف</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<LessonSummaryDto>? _lessons;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _lessons = await Api.GetLessonsAsync();
+        }
+        catch (MadreseAIApiException ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        _error = null;
+        try
+        {
+            await Api.DeleteLessonAsync(id);
+            _lessons = await Api.GetLessonsAsync();
+        }
+        catch (MadreseAIApiException ex)
+        {
+            _error = ex.Message;
+        }
+    }
+}

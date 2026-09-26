@@ -1,0 +1,98 @@
+@page "/lessons/{Id:int}"
+@inject MadreseAIApiClient Api
+
+<PageTitle>مدرس‌یار — بسته آموزشی</PageTitle>
+
+@if (_error is not null)
+{
+    <div class="error-banner">@_error</div>
+    <a class="btn ghost" href="/lessons">→ بازگشت به درس‌ها</a>
+}
+else if (_package is null)
+{
+    <div class="empty"><span class="big">⏳</span>در حال بارگذاری...</div>
+}
+else if (_package.Progress.Status == "ready")
+{
+    @* ---------- Ready: assistant celebration header (§20) ---------- *@
+    <div class="page-head">
+        <div class="grow">
+            <h1>🎉 محتوای کلاس شما آماده است</h1>
+            <p class="page-sub">@_package.LessonTitle</p>
+        </div>
+        <a class="btn ghost" href="/lessons">→ درس‌های من</a>
+    </div>
+
+    @if (_summary is not null)
+    {
+        <div class="chip-row">
+            <span class="chip">📗 @_summary.Value.subject</span>
+            <span class="chip">🎓 پایه @_summary.Value.grade</span>
+            <span class="chip">🧩 @_summary.Value.topic</span>
+            <span class="chip">⏱ @_summary.Value.duration.ToPersianDigits() دقیقه</span>
+        </div>
+    }
+
+    <TeachingPackageView @ref="_view" Package="_package" />
+}
+else
+{
+    @* ---------- Generating / failed: keep the polling view ---------- *@
+    <div class="page-head">
+        <div class="grow">
+            <h1>@_package.LessonTitle</h1>
+            <p class="page-sub">بسته آموزشی درس</p>
+        </div>
+        <a class="btn ghost" href="/lessons">→ درس‌های من</a>
+    </div>
+
+    <TeachingPackageView @ref="_view" Package="_package" />
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private TeachingPackageDto? _package;
+    private TeachingPackageView? _view;
+    private string? _error;
+    private (string subject, string grade, string topic, int duration)? _summary;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _package = await Api.GetLessonAsync(Id);
+            if (_package is null)
+            {
+                _error = "درس یافت نشد.";
+            }
+            else if (_package.Progress.Status == "ready")
+            {
+                // Summary chips come from the existing lessons list API (UI-only, §20).
+                var lessons = await Api.GetLessonsAsync();
+                var match = lessons?.FirstOrDefault(l => l.Id == Id);
+                if (match is not null)
+                {
+                    _summary = (match.Subject, match.Grade, match.Topic, match.DurationMinutes);
+                }
+            }
+        }
+        catch (MadreseAIApiException ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Component refs exist only after render; start polling here.
+        // "draft" covers the brief window between lesson creation and the
+        // generation job flipping the status to "generating".
+        if (firstRender && _package is not null && _package.Progress.Status is "generating" or "draft")
+        {
+            _view?.StartPolling();
+        }
+
+        return Task.CompletedTask;
+    }
+}

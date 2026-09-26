@@ -1,0 +1,97 @@
+@page "/"
+@inject MadreseAIApiClient Api
+
+<PageTitle>مدرس‌یار — خانه</PageTitle>
+
+@* ---------- Hero: assistant greeting (§8) ---------- *@
+<section class="hero">
+    <h1>👋 سلام، @_teacherName</h1>
+    <p class="hero-question">امروز برای کدام کلاس آماده می‌شوید؟</p>
+    <p>مدرس‌یار می‌تواند طرح درس، محتوای آموزشی، فعالیت، آزمون و پرامپت‌های تصویری و ویدئویی کلاس شما را آماده کند.</p>
+    <a class="btn big" href="/lessons/new">✨ ساخت محتوای جدید</a>
+</section>
+
+@* ---------- Assistant capabilities (§9) ---------- *@
+<h2>💡 دستیار شما می‌تواند...</h2>
+<div class="capabilities">
+    <a class="capability" href="/lessons/new">
+        <span class="emoji">📚</span>
+        <b>طرح درس</b>
+        <span>برنامه دقیق و زمان‌بندی‌شده کلاس</span>
+    </a>
+    <a class="capability" href="/lessons/new">
+        <span class="emoji">📝</span>
+        <b>محتوای آموزشی</b>
+        <span>توضیح ساده و مناسب سطح دانش‌آموزان</span>
+    </a>
+    <a class="capability" href="/lessons/new">
+        <span class="emoji">❓</span>
+        <b>آزمون</b>
+        <span>سوال‌های چهارگزینه‌ای و کوتاه‌پاسخ</span>
+    </a>
+    <a class="capability" href="/lessons/new">
+        <span class="emoji">🎬</span>
+        <b>Prompt ویدئو</b>
+        <span>Prompt آماده برای ابزارهای تولید ویدئو مانند Google Flow</span>
+    </a>
+</div>
+
+@* ---------- Recent lessons (§10) ---------- *@
+<div class="page-head" style="margin-top:2.2rem">
+    <div class="grow">
+        <h2>📚 آخرین درس‌های شما</h2>
+    </div>
+    @if (_lessons is { Count: > 0 })
+    {
+        <a href="/lessons">همه درس‌ها ←</a>
+    }
+</div>
+
+@if (_lessons is null)
+{
+    <div class="empty"><span class="big">⏳</span>در حال بارگذاری...</div>
+}
+else if (_lessons.Count == 0)
+{
+    @* ---------- Empty state (§11) ---------- *@
+    <div class="empty">
+        <span class="big">🌱</span>
+        <h2>هنوز کلاسی آماده نکرده‌اید</h2>
+        <p>اولین محتوای کلاس خود را با کمک مدرس‌یار بسازید.</p>
+        <a class="btn" href="/lessons/new">✨ ساخت اولین محتوا</a>
+    </div>
+}
+else
+{
+    <div class="grid grid-2">
+        @foreach (var lesson in _lessons.Take(5))
+        {
+            <a class="lesson-card" href="@($"/lessons/{lesson.Id}")">
+                <h3>@lesson.Title</h3>
+                <div class="meta">
+                    <span>📗 @lesson.Subject</span>
+                    <span>🧩 @lesson.Topic</span>
+                    <span>پایه @lesson.Grade</span>
+                    <span>📅 @lesson.CreatedAt.PersianDate()</span>
+                </div>
+                <div class="card-foot">
+                    <span class="badge @DtoMapper.StatusKey(lesson.Status)">@PersianText.StatusLabel(DtoMapper.StatusKey(lesson.Status))</span>
+                    <span class="view-link">مشاهده ←</span>
+                </div>
+            </a>
+        }
+    </div>
+}
+
+@code {
+    private List<LessonSummaryDto>? _lessons;
+    private string _teacherName = "معلم";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var teacher = await Api.GetTeacherAsync();
+        if (teacher is not null) _teacherName = teacher.FullName;
+
+        _lessons = await Api.GetLessonsAsync();
+    }
+}

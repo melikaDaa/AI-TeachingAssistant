@@ -1,0 +1,125 @@
+@page "/profile"
+@inject MadreseAIApiClient Api
+
+<PageTitle>مدرس‌یار — پروفایل</PageTitle>
+
+<h1>👤 پروفایل معلم</h1>
+<p class="page-sub">این مشخصات به‌صورت خودکار در تولید محتوا استفاده می‌شود.</p>
+
+@if (_error is not null)
+{
+    <div class="error-banner">@_error</div>
+}
+@if (_saved)
+{
+    <div class="edit-note" style="background:var(--ok-light);color:var(--ok)">✓ پروفایل ذخیره شد.</div>
+}
+
+@if (_loaded)
+{
+    <div class="card">
+        <div class="field">
+            <label for="fullname">نام و نام خانوادگی *</label>
+            <input id="fullname" type="text" @bind-value="_fullName" @bind-value:event="oninput" />
+        </div>
+
+        <div class="form-row">
+            <div class="field">
+                <label for="level">مقطع *</label>
+                <select id="level" @bind="_level">
+                    @foreach (var l in TeachingLevels.All)
+                    {
+                        <option value="@l">@l</option>
+                    }
+                </select>
+            </div>
+            <div class="field">
+                <label for="grade">پایه *</label>
+                <input id="grade" type="text" @bind-value="_grade" @bind-value:event="oninput" />
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="subjects">دروس تدریسی *</label>
+            <input id="subjects" type="text" @bind-value="_subjects" @bind-value:event="oninput" placeholder="مثلاً: علوم تجربی" />
+        </div>
+
+        <div class="field">
+            <label for="style">سبک تدریس *</label>
+            <select id="style" @bind="_style">
+                @foreach (var s in new[] { "تعاملی", "سخنرانی", "پروژه‌محور", "آزمایشی", "روایی" })
+                {
+                    <option value="@s">@s</option>
+                }
+            </select>
+        </div>
+
+        <button type="button" class="btn" @onclick="Save" disabled="@_saving">💾 ذخیره پروفایل</button>
+    </div>
+}
+else
+{
+    <div class="empty"><span class="big">⏳</span>در حال بارگذاری...</div>
+}
+
+@code {
+    private bool _loaded;
+    private bool _saved;
+    private bool _saving;
+    private string? _error;
+
+    private string _fullName = string.Empty;
+    private string _level = TeachingLevels.MiddleSchool;
+    private string _grade = string.Empty;
+    private string _subjects = string.Empty;
+    private string _style = "تعاملی";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var teacher = await Api.GetTeacherAsync();
+            if (teacher is not null)
+            {
+                _fullName = teacher.FullName;
+                _level = teacher.Level;
+                _grade = teacher.Grade;
+                _subjects = teacher.Subjects;
+                _style = teacher.TeachingStyle;
+            }
+            _loaded = true;
+        }
+        catch (MadreseAIApiException ex)
+        {
+            _error = ex.Message;
+            _loaded = true;
+        }
+    }
+
+    private async Task Save()
+    {
+        _error = null;
+        _saved = false;
+        _saving = true;
+        try
+        {
+            await Api.UpdateTeacherAsync(new UpdateTeacherRequest
+            {
+                FullName = _fullName,
+                Level = _level,
+                Grade = _grade,
+                Subjects = _subjects,
+                TeachingStyle = _style,
+            });
+            _saved = true;
+        }
+        catch (MadreseAIApiException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

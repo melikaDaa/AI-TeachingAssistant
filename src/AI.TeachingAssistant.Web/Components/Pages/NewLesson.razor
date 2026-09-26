@@ -1,0 +1,206 @@
+@page "/lessons/new"
+@inject MadreseAIApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>مدرس‌یار — ساخت محتوای جدید</PageTitle>
+
+<div class="steps">
+    <div class="step @(_step >= 1 ? "active" : "") @(_step > 1 ? "done" : "")">
+        <span class="n">۱</span> اطلاعات کلاس
+    </div>
+    <div class="step @(_step == 2 ? "active" : "")">
+        <span class="n">۲</span> انتخاب محتوا
+    </div>
+</div>
+
+@if (_step == 1)
+{
+    @* ---------- Step 1: assistant intro (§4) ---------- *@
+    <h1>✨ برای کدام کلاس محتوا می‌سازیم؟</h1>
+    <p class="page-sub">چند اطلاعات کوتاه درباره کلاس وارد کنید تا مدرس‌یار محتوای مناسب را آماده کند.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <div class="card">
+        <div class="form-row">
+            <div class="field">
+                <label for="title">عنوان درس *</label>
+                <input id="title" type="text" @bind-value="_title" @bind-value:event="oninput" placeholder="مثلاً: سلول چیست؟" />
+            </div>
+            <div class="field">
+                <label for="subject">نام درس *</label>
+                <input id="subject" type="text" @bind-value="_subject" @bind-value:event="oninput" placeholder="مثلاً: علوم" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="field">
+                <label for="grade">پایه *</label>
+                <input id="grade" type="text" @bind-value="_grade" @bind-value:event="oninput" placeholder="مثلاً: هفتم" />
+            </div>
+            <div class="field">
+                <label for="topic">موضوع درس *</label>
+                <input id="topic" type="text" @bind-value="_topic" @bind-value:event="oninput" placeholder="مثلاً: سلول" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="field">
+                <label for="duration">مدت کلاس (دقیقه) *</label>
+                <input id="duration" type="number" min="15" max="240" step="5" @bind-value="_duration" @bind-value:event="oninput" />
+            </div>
+            <div class="field">
+                <label for="level">سطح دانش‌آموزان *</label>
+                <select id="level" @bind="_level">
+                    <option value="مبتدی">مبتدی</option>
+                    <option value="متوسط">متوسط</option>
+                    <option value="پیشرفته">پیشرفته</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="instructions">توضیحات تکمیلی (اختیاری)</label>
+            <textarea id="instructions" @bind-value="_instructions" @bind-value:event="oninput" placeholder="مثلاً: درس را تعاملی و مناسب گفت‌وگوی کلاسی طراحی کن."></textarea>
+        </div>
+
+        <button type="button" class="btn big" @onclick="() => _step = 2">ادامه ← انتخاب محتوا</button>
+    </div>
+}
+
+@if (_step == 2)
+{
+    @* ---------- Step 2: what should I prepare? (§5) ---------- *@
+    <h1>🎯 چه چیزی برای کلاس شما آماده کنم؟</h1>
+    <p class="page-sub">می‌توانید همه موارد را یک‌جا بسازید یا فقط هر کدام را که لازم دارید انتخاب کنید.</p>
+
+    @if (_error is not null)
+    {
+        <div class="error-banner">@_error</div>
+    }
+
+    <label class="select-all @(IsFullPackage ? "selected" : "")">
+        <input type="checkbox" checked="@IsFullPackage" @onclick="ToggleFullPackage" />
+        <div>
+            <b>✨ ساخت محتوای کامل کلاس</b><br />
+            <span>طرح درس + محتوای آموزشی + فعالیت + آزمون + پرامپت تصویر + پرامپت ویدئو</span>
+        </div>
+    </label>
+
+    <div class="selector-grid">
+        @foreach (var s in SectionMeta.All)
+        {
+            var selected = _selected.Contains(s.Code);
+            <label class="select-card @(selected ? "selected" : "")">
+                <input type="checkbox" checked="@selected" @onclick="() => ToggleSection(s.Code)" />
+                <div>
+                    <span class="emoji">@s.Emoji</span>
+                    <b>@s.Title</b>
+                    <span>@SectionHint(s.Code)</span>
+                </div>
+            </label>
+        }
+    </div>
+
+    <div class="section-toolbar" style="margin-top:1.2rem">
+        <button type="button" class="btn ghost big" @onclick="() => _step = 1">→ بازگشت</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn big" disabled="@(!_selected.Any() || _generating)" @onclick="Generate">
+            @(_generating ? "در حال آماده‌سازی..." : "✨ ساخت محتوای کلاس")
+        </button>
+    </div>
+}
+
+@code {
+    private int _step = 1;
+    private bool _generating;
+
+    private string _title = string.Empty;
+    private string _subject = string.Empty;
+    private string _grade = string.Empty;
+    private string _topic = string.Empty;
+    private int _duration = 60;
+    private string _level = "متوسط";
+    private string _instructions = string.Empty;
+
+    private HashSet<int> _selected = new() { 1, 2, 3, 4, 5, 6 };
+
+    private string? _error;
+
+    private bool IsFullPackage => _selected.Count == SectionMeta.All.Count;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Prefill from the teacher profile to minimize typing (spec §2).
+        var teacher = await Api.GetTeacherAsync();
+        if (teacher is not null)
+        {
+            _grade = teacher.Grade;
+            _subject = teacher.Subjects
+                .Split('،', ',')
+                .Select(s => s.Trim())
+                .FirstOrDefault(s => s.Length > 0 && s != "و") ?? string.Empty;
+        }
+    }
+
+    private static string SectionHint(int code) => code switch
+    {
+        1 => "برنامه دقیق کلاس با زمان‌بندی",
+        2 => "توضیح آماده برای تدریس",
+        3 => "فعالیت تعاملی گروهی",
+        4 => "۵ گزینه‌ای + ۳ کوتاه با پاسخ‌نامه",
+        5 => "۲ پرامپت برای ابزار تولید تصویر",
+        6 => "۱ پرامپت برای ابزار تولید ویدئو",
+        _ => string.Empty,
+    };
+
+    private void ToggleFullPackage()
+    {
+        _selected = IsFullPackage
+            ? new HashSet<int>()
+            : new HashSet<int>(SectionMeta.All.Select(s => s.Code));
+        _error = null;
+    }
+
+    private void ToggleSection(int code)
+    {
+        if (!_selected.Remove(code))
+        {
+            _selected.Add(code);
+        }
+        _error = null;
+    }
+
+    private async Task Generate()
+    {
+        _error = null;
+        _generating = true;
+        try
+        {
+            var created = await Api.CreateLessonAsync(new CreateLessonRequest
+            {
+                Title = _title,
+                Subject = _subject,
+                Grade = _grade,
+                Topic = _topic,
+                DurationMinutes = _duration,
+                StudentLevel = _level,
+                AdditionalInstructions = string.IsNullOrWhiteSpace(_instructions) ? null : _instructions,
+                RequestedSections = _selected.OrderBy(x => x).ToList(),
+            });
+
+            await Api.StartGenerationAsync(created!.Id);
+
+            // The package page is addressable; it polls until generation completes.
+            Nav.NavigateTo($"/lessons/{created.Id}");
+        }
+        catch (MadreseAIApiException ex)
+        {
+            _error = ex.Message;
+            _generating = false;
+        }
+    }
+}

@@ -1,0 +1,38 @@
+@* ---------- 📚 Lesson Plan view ---------- *@
+
+<div class="section-label">📚 طرح درس</div>
+<h2>طرح درس کلاس</h2>
+
+<h3>هدف‌های آموزشی</h3>
+<ul>
+    @foreach (var o in Plan.LearningObjectives)
+    {
+        <li>@o</li>
+    }
+</ul>
+
+<h3>وسایل مورد نیاز</h3>
+<ul>
+    @foreach (var m in Plan.RequiredMaterials)
+    {
+        <li>@m</li>
+    }
+</ul>
+
+<h3>برنامه زمانی کلاس</h3>
+<ul class="timeline">
+    @foreach (var s in Plan.Segments)
+    {
+        <li>
+            <span class="time-chip">@s.StartMinute.ToPersianDigits()–@s.EndMinute.ToPersianDigits() دقیقه</span>
+            <div><b>@s.Title</b><br />@s.Description</div>
+        </li>
+    }
+</ul>
+
+<h3>تکلیف منزل</h3>
+<p>@Plan.Homework</p>
+
+@code {
+    [Parameter, EditorRequired] public LessonPlanDto Plan { get; set; } = null!;
+}

@@ -1,0 +1,42 @@
+@* ---------- 🖼 / 🎬 Media prompt card (image + video) ---------- *@
+
+<div class="prompt-card">
+    <h3>@Title</h3>
+
+    @if (Image is not null)
+    {
+        <dl class="prompt-attrs">
+            <dt>موضوع تصویر</dt><dd>@Image.Subject</dd>
+            <dt>عناصر بصری</dt><dd>@Image.VisualElements</dd>
+            <dt>سبک</dt><dd>@Image.Style</dd>
+            <dt>ترکیب‌بندی</dt><dd>@Image.Composition</dd>
+            <dt>هدف آموزشی</dt><dd>@Image.EducationalPurpose</dd>
+            <dt>محدودیت متن</dt><dd>@Image.TextRestrictions</dd>
+        </dl>
+    }
+    else if (Video is not null)
+    {
+        <dl class="prompt-attrs">
+            <dt>توصیف صحنه</dt><dd>@Video.SceneDescription</dd>
+            <dt>شخصیت‌ها / اشیاء</dt><dd>@Video.Characters</dd>
+            <dt>محیط</dt><dd>@Video.Environment</dd>
+            <dt>دوربین</dt><dd>@Video.Camera</dd>
+            <dt>حرکت</dt><dd>@Video.Motion</dd>
+            <dt>مدت</dt><dd>@Video.Duration</dd>
+            <dt>هدف آموزشی</dt><dd>@Video.EducationalObjective</dd>
+            <dt>سبک بصری</dt><dd>@Video.VisualStyle</dd>
+        </dl>
+    }
+
+    <div class="prompt-box">@FinalPrompt</div>
+    <p class="prompt-hint">این پرامپت را می‌توانید در ابزارهای تولید @(Image is not null ? "تصویر" : "ویدئو مانند Google Flow") استفاده کنید.</p>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public ImagePromptDto? Image { get; set; }
+    [Parameter] public VideoPromptDto? Video { get; set; }
+
+    private string FinalPrompt =>
+        Image?.FinalPrompt ?? Video?.FinalPrompt ?? string.Empty;
+}

@@ -1,0 +1,29 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+artifacts/
+
+## Local database (never commit data)
+*.db
+*.db-shm
+*.db-wal
+
+## Secrets & environment
+.env
+appsettings.*.Local.json
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Test results
+TestResults/
+*.trx

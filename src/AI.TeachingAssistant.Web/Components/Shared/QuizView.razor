@@ -1,0 +1,49 @@
+@* ---------- ❓ Quiz view ---------- *@
+
+<div class="section-label">❓ آزمون</div>
+<h2>آزمون پایان درس</h2>
+
+<h3>سؤال‌های چهارگزینه‌ای</h3>
+@{
+    var mcqIndex = 0;
+}
+@foreach (var q in Quiz.Questions.Where(x => x.Type == "mcq"))
+{
+    mcqIndex++;
+    <div class="q-item">
+        <b>@mcqIndex.ToPersianDigits(). @q.Text</b>
+        <ol>
+            @foreach (var opt in q.Options ?? new List<string>())
+            {
+                <li>@opt</li>
+            }
+        </ol>
+    </div>
+}
+
+<h3>سؤال‌های کوتاه</h3>
+@{
+    var shortIndex = 0;
+}
+@foreach (var q in Quiz.Questions.Where(x => x.Type == "shortAnswer"))
+{
+    shortIndex++;
+    <div class="q-item">
+        <b>@shortIndex.ToPersianDigits(). @q.Text</b>
+        <span class="q-type">پاسخ کوتاه</span>
+    </div>
+}
+
+<details class="answer-key card">
+    <summary>🔑 پاسخ‌نامه</summary>
+    <ol>
+        @foreach (var q in Quiz.Questions)
+        {
+            <li>@q.CorrectAnswer</li>
+        }
+    </ol>
+</details>
+
+@code {
+    [Parameter, EditorRequired] public QuizDto Quiz { get; set; } = null!;
+}
