@@ -77,7 +77,7 @@ public sealed record ActivityDto(
     List<string> Instructions,
     string ExpectedResult);
 
-public sealed record QuestionDto(string Type, string Text, List<string>? Options, string CorrectAnswer);
+public sealed record QuestionDto(string Type, string Text, List<string>? Options, string CorrectAnswer, string Explanation);
 
 public sealed record QuizDto(int Id, List<QuestionDto> Questions);
 
@@ -118,6 +118,7 @@ public sealed record TeachingPackageDto(
     EducationalContentDto? EducationalContent,
     ActivityDto? Activity,
     QuizDto? Quiz,
-    MediaPromptsDto Media);
+    MediaPromptsDto Media,
+    List<int> RequestedSections);
 
 public sealed record SectionEditRequest(string PayloadJson);

@@ -6,7 +6,11 @@ namespace AI.TeachingAssistant.Application.Prompts;
 /// <summary>Builds the prompt for the image prompt section (2 prompts).</summary>
 public static class ImagePromptBuilder
 {
-    public static string System => "تو متخصص طراحی پرامپت برای ابزارهای تولید تصویر با هوش مصنوعی هستی. فقط JSON معتبر برگردان؛ هیچ متن اضافه‌ای قبل یا بعد از JSON ننویس.";
+    /// <summary>Specialist identity of the model for this section (layer 2, on top of the shared role).</summary>
+    public static string System => "تو در این کار متخصص طراحی پرامپت برای ابزارهای تولید تصویر با هوش مصنوعی هستی و تصویرهای آموزشی دقیق برای مفاهیم درسی طراحی می‌کنی.";
+
+    /// <summary>Higher creativity (§17) — visual concepts benefit from imaginative angles.</summary>
+    public const double Temperature = 0.8;
 
     public static string BuildUserPrompt(GenerationContext ctx)
     {
@@ -29,9 +33,10 @@ public static class ImagePromptBuilder
         sb.AppendLine("  ]");
         sb.AppendLine("}");
         sb.AppendLine("قواعد مهم:");
-        sb.AppendLine("- finalPrompt باید انگلیسی، مفصل و بهینه برای ابزارهایی مانند DALL-E یا Midjourney باشد.");
+        sb.AppendLine("- دو تصویر باید دو هدف آموزشی متفاوت از هدف‌ها و مفاهیم کلیدی همین درس را پوشش دهند.");
+        sb.AppendLine("- finalPrompt باید انگلیسیِ روان، مفصل و بهینه برای ابزارهایی مانند DALL-E یا Midjourney باشد؛ آن را با دقت املایی بنویس.");
+        sb.AppendLine("- در finalPrompt صراحتاً بنویس: no text, no letters, no labels.");
         sb.AppendLine("- در textRestrictions بنویس که تصویر هیچ متن یا حروفی نداشته باشد تا از متن فارسی خراب جلوگیری شود.");
-        sb.AppendLine("- دو تصویر باید دو هدف آموزشی متفاوت را پوشش دهند.");
         return sb.ToString();
     }
 }

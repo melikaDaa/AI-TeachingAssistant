@@ -18,6 +18,9 @@ public sealed class QuestionModel
 
     /// <summary>Correct option text (mcq) or model answer (short answer).</summary>
     public string CorrectAnswer { get; set; } = string.Empty;
+
+    /// <summary>Short teaching note explaining the answer (answer-key companion).</summary>
+    public string Explanation { get; set; } = string.Empty;
 }
 
 /// <summary>Payload of the quiz section (stored as JSON).</summary>

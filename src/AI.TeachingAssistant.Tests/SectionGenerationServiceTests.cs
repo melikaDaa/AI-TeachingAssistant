@@ -15,6 +15,14 @@ internal sealed class FailingProvider : IAIProvider
         => throw new AiProviderException("boom");
 }
 
+/// <summary>A provider that fails with a safe Persian message (mirrors the real provider mapping).</summary>
+internal sealed class PersianFailingProvider : IAIProvider
+{
+    public string Name => "persian-failing";
+    public Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken cancellationToken = default)
+        => throw new AiProviderException("احراز هویت سرویس هوش مصنوعی ناموفق بود.");
+}
+
 /// <summary>A provider that returns garbage instead of JSON.</summary>
 internal sealed class GarbageProvider : IAIProvider
 {
@@ -37,6 +45,15 @@ public class SectionGenerationServiceTests
         var result = await service.GenerateQuizAsync(Context());
         Assert.False(result.Ok);
         Assert.Equal("در تولید محتوا مشکلی پیش آمد. لطفاً دوباره تلاش کنید.", result.Error);
+    }
+
+    [Fact]
+    public async Task Safe_Provider_Message_Is_Passed_To_The_Teacher()
+    {
+        var service = new SectionGenerationService(new PersianFailingProvider());
+        var result = await service.GenerateQuizAsync(Context());
+        Assert.False(result.Ok);
+        Assert.Equal("احراز هویت سرویس هوش مصنوعی ناموفق بود.", result.Error);
     }
 
     [Fact]

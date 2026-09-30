@@ -10,10 +10,17 @@ public sealed record AiRequest(
 /// <summary>Raw text response from the AI provider.</summary>
 public sealed record AiResponse(string Content);
 
-/// <summary>Thrown when an AI call fails (timeout, network, rate limit, empty response, ...).</summary>
+/// <summary>
+/// Thrown when an AI call fails (timeout, network, rate limit, empty response, ...).
+/// <see cref="IsTransient"/> marks failures worth one retry (timeout, network, 429, 5xx);
+/// deterministic failures (missing key, auth) fail immediately.
+/// </summary>
 public class AiProviderException : Exception
 {
-    public AiProviderException(string message, Exception? inner = null) : base(message, inner) { }
+    public bool IsTransient { get; }
+
+    public AiProviderException(string message, Exception? inner = null, bool isTransient = false)
+        : base(message, inner) => IsTransient = isTransient;
 }
 
 /// <summary>

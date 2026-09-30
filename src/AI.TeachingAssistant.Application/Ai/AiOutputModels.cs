@@ -44,6 +44,7 @@ public sealed class AiQuestion
     public string Text { get; set; } = string.Empty;
     public List<string>? Options { get; set; }
     public string CorrectAnswer { get; set; } = string.Empty;
+    public string Explanation { get; set; } = string.Empty;
 }
 
 public sealed class AiQuiz

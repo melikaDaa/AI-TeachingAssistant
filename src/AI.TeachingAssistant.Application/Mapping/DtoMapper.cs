@@ -1,4 +1,5 @@
 using AI.TeachingAssistant.Application.Dtos;
+using AI.TeachingAssistant.Application.Services;
 using AI.TeachingAssistant.Domain.Entities;
 using AI.TeachingAssistant.Domain.Models;
 
@@ -48,7 +49,7 @@ public static class DtoMapper
             entity!.Id,
             m.Questions.Select(q => new QuestionDto(
                 q.Type == QuestionType.Mcq ? "mcq" : "shortAnswer",
-                q.Text, q.Options, q.CorrectAnswer)).ToList());
+                q.Text, q.Options, q.CorrectAnswer, q.Explanation)).ToList());
     }
 
     public static MediaPromptsDto ToMediaDto(this TeachingPackage? package)
@@ -90,7 +91,8 @@ public static class DtoMapper
             package?.EducationalContent.ToDto(),
             package?.Activity.ToDto(),
             package?.Quiz.ToDto(),
-            package.ToMediaDto());
+            package.ToMediaDto(),
+            GenerationCoordinator.ParseSections(lesson.RequestedSections));
     }
 
     public static string StatusKey(PackageStatus status) => status switch

@@ -83,6 +83,15 @@ public class LessonsController : ControllerBase
         var sectionType = SectionCode(section);
         if (sectionType is null) return BadRequest(new { error = "نوع محتوای نامعتبر است." });
 
+        // Flip the status synchronously BEFORE the 202 (PART 18): the very first poll after
+        // enqueue must see "generating", otherwise it can mistake the regenerate for an
+        // instant no-op and show stale content. The worker flips it too, as a safety net.
+        if (lesson.PackageStatus is not PackageStatus.Generating)
+        {
+            lesson.PackageStatus = PackageStatus.Generating;
+            await _repository.UpdateAsync(lesson, ct);
+        }
+
         _jobs.Enqueue(id, sectionType.Value);
         return Accepted(new { status = "generating" });
     }

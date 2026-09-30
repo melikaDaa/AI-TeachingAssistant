@@ -20,12 +20,17 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Default") ?? "Data Source=madreseai.db";
         services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
 
-        // ---------- AI provider (mock by default; OpenAI-compatible when AI_PROVIDER=openai) ----------
+        // ---------- AI provider (mock by default; xKiro via OpenAI-compatible API) ----------
         var aiOptions = new OpenAiCompatibleOptions();
         configuration.GetSection(OpenAiCompatibleOptions.SectionName).Bind(aiOptions);
 
-        // Spec §27: AI_PROVIDER / AI_API_KEY / AI_BASE_URL / AI_MODEL environment variables win.
-        aiOptions.ApiKey = FirstNonEmpty(Environment.GetEnvironmentVariable("AI_API_KEY"), aiOptions.ApiKey);
+        // Environment variables win over appsettings (spec Step 3 §5):
+        //   AI_PROVIDER / AI_API_KEY / AI_BASE_URL / AI_MODEL  — generic
+        //   XKIRO_API_KEY                                      — xKiro-specific alias
+        aiOptions.ApiKey = FirstNonEmpty(
+            Environment.GetEnvironmentVariable("AI_API_KEY"),
+            Environment.GetEnvironmentVariable("XKIRO_API_KEY"),
+            aiOptions.ApiKey);
         aiOptions.BaseUrl = FirstNonEmpty(Environment.GetEnvironmentVariable("AI_BASE_URL"), aiOptions.BaseUrl);
         aiOptions.Model = FirstNonEmpty(Environment.GetEnvironmentVariable("AI_MODEL"), aiOptions.Model);
         var provider = FirstNonEmpty(
@@ -34,9 +39,21 @@ public static class DependencyInjection
             "mock");
 
         services.AddSingleton(aiOptions);
-        if (provider.Equals("openai", StringComparison.OrdinalIgnoreCase))
+        // "xkiro" and "openai" both mean: real provider over the OpenAI-compatible client.
+        // Anything else (incl. "mock") stays on the offline mock so development needs no key.
+        if (provider.Equals("xkiro", StringComparison.OrdinalIgnoreCase) ||
+            provider.Equals("openai", StringComparison.OrdinalIgnoreCase))
         {
-            services.AddHttpClient<IAIProvider, OpenAiCompatibleProvider>();
+            // The real provider needs its BaseUrl (config/env) wired onto the HttpClient —
+            // chat/completions is called as a relative URI against this base address.
+            services.AddHttpClient<IAIProvider, OpenAiCompatibleProvider>((sp, http) =>
+            {
+                var opts = sp.GetRequiredService<OpenAiCompatibleOptions>();
+                // Trailing slash is required: base "…/v1" + relative "chat/completions"
+                // would otherwise resolve to "…/chat/completions" (dropping /v1 → 404).
+                http.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/");
+                http.Timeout = TimeSpan.FromSeconds(opts.TimeoutSeconds);
+            });
         }
         else
         {
