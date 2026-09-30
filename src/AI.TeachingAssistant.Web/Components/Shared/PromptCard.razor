@@ -1,7 +1,17 @@
-@* ---------- 🖼 / 🎬 Media prompt card (image + video) ---------- *@
+@* ---------- Media prompt card (image + video) ---------- *@
 
 <div class="prompt-card">
-    <h3>@Title</h3>
+    <div class="prompt-head">
+        <h3>@Title</h3>
+        <button type="button" class="btn ghost small" @onclick="CopyPrompt">
+            <Icon Name="IconName.Copy" Size="15" /> کپی پرامپت
+        </button>
+    </div>
+
+    @if (_copied)
+    {
+        <div class="edited-note"><Icon Name="IconName.Check" Size="14" /> کپی شد</div>
+    }
 
     @if (Image is not null)
     {
@@ -33,10 +43,22 @@
 </div>
 
 @code {
-    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
     [Parameter] public ImagePromptDto? Image { get; set; }
     [Parameter] public VideoPromptDto? Video { get; set; }
 
+    [Inject] private IJSRuntime JS { get; set; } = null!;
+
+    private bool _copied;
+
     private string FinalPrompt =>
         Image?.FinalPrompt ?? Video?.FinalPrompt ?? string.Empty;
+
+    // Per-prompt copy button (spec §13/§14): copies the final English prompt.
+    private async Task CopyPrompt()
+    {
+        if (string.IsNullOrWhiteSpace(FinalPrompt)) return;
+        await JS.InvokeVoidAsync("copyToClipboard", FinalPrompt);
+        _copied = true;
+    }
 }

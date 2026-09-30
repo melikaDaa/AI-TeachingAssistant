@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <title>مدرس‌یار</title>
+  <rect width="48" height="48" rx="11" fill="#FFFFFF"/>
+  <!-- open book (learning): two asymmetric wings -->
+  <path d="M23 14.5 C18.5 10.5 12.5 9 7 9.6 L7 33.5 C12.5 32.9 18.5 34.4 23 38.4 Z" fill="#2732C6"/>
+  <path d="M25 14.5 C29.5 10.5 35.5 9 41 9.6 L41 33.5 C35.5 32.9 29.5 34.4 25 38.4 Z" fill="#702DC5"/>
+  <!-- AI spark rising from the book's center -->
+  <path d="M24 2 26.4 9.6 34 12 26.4 14.4 24 22 21.6 14.4 14 12 21.6 9.6 Z" fill="#FFFFFF" stroke="#702DC5" stroke-width="1.6" stroke-linejoin="round"/>
+  <!-- desk line -->
+  <rect x="8" y="41.5" width="32" height="3" rx="1.5" fill="#702DC5" opacity="0.35"/>
+</svg>

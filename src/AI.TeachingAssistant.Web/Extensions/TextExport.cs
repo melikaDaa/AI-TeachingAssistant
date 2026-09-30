@@ -64,7 +64,11 @@ public static class TextExport
         sb.AppendLine("\nپاسخ‌نامه:");
         n = 1;
         foreach (var item in q.Questions)
+        {
             sb.AppendLine($"{(n++).ToPersianDigits()}. {item.CorrectAnswer}");
+            if (!string.IsNullOrWhiteSpace(item.Explanation))
+                sb.AppendLine($"   💡 {item.Explanation}");
+        }
         return sb.ToString();
     }
 

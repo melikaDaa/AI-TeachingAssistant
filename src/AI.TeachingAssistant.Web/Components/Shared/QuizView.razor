@@ -1,6 +1,5 @@
-@* ---------- ❓ Quiz view ---------- *@
+@* ---------- Quiz view ---------- *@
 
-<div class="section-label">❓ آزمون</div>
 <h2>آزمون پایان درس</h2>
 
 <h3>سؤال‌های چهارگزینه‌ای</h3>
@@ -35,11 +34,17 @@
 }
 
 <details class="answer-key card">
-    <summary>🔑 پاسخ‌نامه</summary>
+    <summary><Icon Name="IconName.Check" Size="15" /> پاسخ‌نامه</summary>
     <ol>
         @foreach (var q in Quiz.Questions)
         {
-            <li>@q.CorrectAnswer</li>
+            <li>
+                @q.CorrectAnswer
+                @if (!string.IsNullOrWhiteSpace(q.Explanation))
+                {
+                    <div class="q-explanation"><Icon Name="IconName.Bulb" Size="14" /><span>@q.Explanation</span></div>
+                }
+            </li>
         }
     </ol>
 </details>

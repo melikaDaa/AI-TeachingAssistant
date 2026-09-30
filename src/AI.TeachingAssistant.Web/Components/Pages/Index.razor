@@ -1,96 +1,173 @@
 @page "/"
 @inject MadreseAIApiClient Api
 
-<PageTitle>مدرس‌یار — خانه</PageTitle>
+<PageTitle>مدرس‌یار — داشبورد</PageTitle>
 
-@* ---------- Hero: assistant greeting (§8) ---------- *@
+@* ---------- Assistant area (PART 3) ---------- *@
 <section class="hero">
-    <h1>👋 سلام، @_teacherName</h1>
-    <p class="hero-question">امروز برای کدام کلاس آماده می‌شوید؟</p>
-    <p>مدرس‌یار می‌تواند طرح درس، محتوای آموزشی، فعالیت، آزمون و پرامپت‌های تصویری و ویدئویی کلاس شما را آماده کند.</p>
-    <a class="btn big" href="/lessons/new">✨ ساخت محتوای جدید</a>
+    <div class="hero-text">
+        <h1>سلام، @_teacherName 👋</h1>
+        <p class="hero-question">من دستیار هوشمند شما هستم.</p>
+        <p>
+            در چند دقیقه می‌توانم به شما در ساخت محتوای آموزشی، طرح درس، فعالیت کلاسی و آزمون کمک کنم —
+            همه‌چیز متناسب با پایه و سطح دانش‌آموزان شما.
+        </p>
+        <a class="btn big" href="/lessons/new"><Icon Name="IconName.Plus" Size="18" /> ساخت محتوای آموزشی جدید</a>
+    </div>
+    @* Original abstract visual: the brand mark on a soft node pattern (PART 17) *@
+    <div class="hero-art" aria-hidden="true">
+        <BrandMark Size="96" />
+    </div>
 </section>
 
-@* ---------- Assistant capabilities (§9) ---------- *@
-<h2>💡 دستیار شما می‌تواند...</h2>
+@* ---------- Quick creation actions (PART 4) — only real features ---------- *@
+<h2>چه کاری می‌توانم برایتان انجام دهم؟</h2>
 <div class="capabilities">
     <a class="capability" href="/lessons/new">
-        <span class="emoji">📚</span>
-        <b>طرح درس</b>
-        <span>برنامه دقیق و زمان‌بندی‌شده کلاس</span>
-    </a>
-    <a class="capability" href="/lessons/new">
-        <span class="emoji">📝</span>
+        <span class="emoji"><Icon Name="IconName.Content" Size="20" /></span>
         <b>محتوای آموزشی</b>
-        <span>توضیح ساده و مناسب سطح دانش‌آموزان</span>
+        <span>توضیح آماده برای تدریس، مناسب سطح کلاس</span>
+        <span class="go">شروع <Icon Name="IconName.ArrowLeft" Size="15" /></span>
     </a>
     <a class="capability" href="/lessons/new">
-        <span class="emoji">❓</span>
+        <span class="emoji"><Icon Name="IconName.Lesson" Size="20" /></span>
+        <b>طرح درس</b>
+        <span>برنامه دقیق کلاس با زمان‌بندی هر بخش</span>
+        <span class="go">شروع <Icon Name="IconName.ArrowLeft" Size="15" /></span>
+    </a>
+    <a class="capability" href="/lessons/new">
+        <span class="emoji"><Icon Name="IconName.Activity" Size="20" /></span>
+        <b>فعالیت کلاسی</b>
+        <span>فعالیت تعاملی قابل اجرا با وسایل ساده</span>
+        <span class="go">شروع <Icon Name="IconName.ArrowLeft" Size="15" /></span>
+    </a>
+    <a class="capability" href="/lessons/new">
+        <span class="emoji"><Icon Name="IconName.Quiz" Size="20" /></span>
         <b>آزمون</b>
-        <span>سوال‌های چهارگزینه‌ای و کوتاه‌پاسخ</span>
+        <span>۵ سؤال گزینه‌ای و ۳ کوتاه با پاسخ‌نامه</span>
+        <span class="go">شروع <Icon Name="IconName.ArrowLeft" Size="15" /></span>
     </a>
     <a class="capability" href="/lessons/new">
-        <span class="emoji">🎬</span>
-        <b>Prompt ویدئو</b>
-        <span>Prompt آماده برای ابزارهای تولید ویدئو مانند Google Flow</span>
+        <span class="emoji"><Icon Name="IconName.Image" Size="20" /></span>
+        <b>پرامپت تصویر</b>
+        <span>۲ پرامپت آماده برای ابزار تولید تصویر</span>
+        <span class="go">شروع <Icon Name="IconName.ArrowLeft" Size="15" /></span>
+    </a>
+    <a class="capability" href="/lessons/new">
+        <span class="emoji"><Icon Name="IconName.Video" Size="20" /></span>
+        <b>پرامپت ویدیو</b>
+        <span>۱ پرامپت آماده برای ابزار تولید ویدئو</span>
+        <span class="go">شروع <Icon Name="IconName.ArrowLeft" Size="15" /></span>
     </a>
 </div>
 
-@* ---------- Recent lessons (§10) ---------- *@
-<div class="page-head" style="margin-top:2.2rem">
-    <div class="grow">
-        <h2>📚 آخرین درس‌های شما</h2>
-    </div>
-    @if (_lessons is { Count: > 0 })
-    {
-        <a href="/lessons">همه درس‌ها ←</a>
-    }
-</div>
+@* ---------- Recent lessons (PART 5) + side column (PART 6/7) ---------- *@
+<div style="display:grid; grid-template-columns: 1.7fr 1fr; gap:1.1rem; margin-top:1.8rem" class="dash-cols">
+    <section>
+        <div class="page-head" style="margin-bottom:.8rem">
+            <div class="grow"><h2>درس‌های اخیر</h2></div>
+            @if (_lessons is { Count: > 0 })
+            {
+                <a href="/lessons">مشاهده همه <Icon Name="IconName.ArrowLeft" Size="15" /></a>
+            }
+        </div>
 
-@if (_lessons is null)
-{
-    <div class="empty"><span class="big">⏳</span>در حال بارگذاری...</div>
-}
-else if (_lessons.Count == 0)
-{
-    @* ---------- Empty state (§11) ---------- *@
-    <div class="empty">
-        <span class="big">🌱</span>
-        <h2>هنوز کلاسی آماده نکرده‌اید</h2>
-        <p>اولین محتوای کلاس خود را با کمک مدرس‌یار بسازید.</p>
-        <a class="btn" href="/lessons/new">✨ ساخت اولین محتوا</a>
-    </div>
-}
-else
-{
-    <div class="grid grid-2">
-        @foreach (var lesson in _lessons.Take(5))
+        @if (_lessons is null)
         {
-            <a class="lesson-card" href="@($"/lessons/{lesson.Id}")">
-                <h3>@lesson.Title</h3>
-                <div class="meta">
-                    <span>📗 @lesson.Subject</span>
-                    <span>🧩 @lesson.Topic</span>
-                    <span>پایه @lesson.Grade</span>
-                    <span>📅 @lesson.CreatedAt.PersianDate()</span>
-                </div>
-                <div class="card-foot">
-                    <span class="badge @DtoMapper.StatusKey(lesson.Status)">@PersianText.StatusLabel(DtoMapper.StatusKey(lesson.Status))</span>
-                    <span class="view-link">مشاهده ←</span>
-                </div>
-            </a>
+            <div class="empty"><span class="big"><Icon Name="IconName.Loader" Size="26" CssClass="spin" /></span>در حال بارگذاری...</div>
         }
-    </div>
-}
+        else if (_lessons.Count == 0)
+        {
+            @* ---------- Empty state (PART 18) ---------- *@
+            <div class="empty">
+                <span class="big"><BrandMark Size="52" /></span>
+                <h2>هنوز درسی نساخته‌اید</h2>
+                <p>با کمک مدرس‌یار اولین محتوای آموزشی خود را در چند دقیقه آماده کنید.</p>
+                <a class="btn" href="/lessons/new"><Icon Name="IconName.Plus" Size="17" /> ساخت محتوای جدید</a>
+            </div>
+        }
+        else
+        {
+            <div class="grid">
+                @foreach (var lesson in _lessons.Take(4))
+                {
+                    <a class="lesson-row" href="@($"/lessons/{lesson.Id}")">
+                        <span class="capability" style="pointer-events:none; padding:.55rem; border-radius:10px" aria-hidden="true">
+                            <span class="emoji" style="margin:0; width:2.2rem; height:2.2rem"><Icon Name="IconName.Lesson" Size="18" /></span>
+                        </span>
+                        <span class="grow">
+                            <h3>@lesson.Title</h3>
+                            <div class="meta">
+                                <span>@lesson.Subject</span>
+                                <span>·</span>
+                                <span>پایه @lesson.Grade</span>
+                                <span>·</span>
+                                <span><Icon Name="IconName.Time" Size="14" /> @lesson.DurationMinutes.ToPersianDigits() دقیقه</span>
+                            </div>
+                        </span>
+                        <span class="badge @DtoMapper.StatusKey(lesson.Status)">@PersianText.StatusLabel(DtoMapper.StatusKey(lesson.Status))</span>
+                    </a>
+                }
+            </div>
+        }
+    </section>
+
+    <section>
+        @* ---------- Quick access (PART 6, visually secondary) ---------- *@
+        <div class="page-head" style="margin-bottom:.8rem">
+            <div class="grow"><h2>دسترسی سریع</h2></div>
+        </div>
+        <div class="quick-grid">
+            <a class="quick-link" href="/lessons/new"><Icon Name="IconName.Content" Size="18" /> محتوای جدید</a>
+            <a class="quick-link" href="/lessons"><Icon Name="IconName.Lesson" Size="18" /> درس‌های من</a>
+            <a class="quick-link" href="/lessons/new"><Icon Name="IconName.Quiz" Size="18" /> آزمون</a>
+            <a class="quick-link" href="/lessons/new"><Icon Name="IconName.Activity" Size="18" /> فعالیت کلاسی</a>
+        </div>
+
+        @* ---------- Daily tip (PART 7) ---------- *@
+        <div class="tip-card" style="margin-top:1rem">
+            <Icon Name="IconName.Bulb" Size="20" />
+            <div>
+                <b>نکته امروز</b>
+                <p>«@_tip»</p>
+            </div>
+        </div>
+    </section>
+</div>
 
 @code {
     private List<LessonSummaryDto>? _lessons;
-    private string _teacherName = "معلم";
+    private string _teacherName = "معلم عزیز";
+
+    // Assistant-style tips (PART 7); rotates by day so returning teachers see variety.
+    private static readonly string[] Tips =
+    {
+        "برای افزایش مشارکت دانش‌آموزان، از فعالیت‌های کوتاه گروهی در میانه تدریس استفاده کنید.",
+        "پرسیدن «اگر ... چه می‌شد؟» پیش از پایان درس، فهم دانش‌آموز را عمیق‌تر می‌کند.",
+        "پایه هفتم بهترین زمان برای تثبیت عادت یادداشت‌برداری کوتاه است؛ دو دقیقه از کلاس را به آن بدهید.",
+        "پیش از شروع مطلب جدید، یک تصویر یا مثال ملموس نشان دهید تا ذهن کلاس آماده شود.",
+        "آزمون کوتاه چهار سؤالی آخر هفته، مرور را بدون استرس انجام می‌دهد.",
+    };
+
+    private string _tip = Tips[0];
 
     protected override async Task OnInitializedAsync()
     {
-        var teacher = await Api.GetTeacherAsync();
-        if (teacher is not null) _teacherName = teacher.FullName;
+        _tip = Tips[(int)(DateTime.Today.DayOfYear % Tips.Length)];
+
+        try
+        {
+            var teacher = await Api.GetTeacherAsync();
+            if (teacher is not null)
+            {
+                var first = teacher.FullName.Split(' ')[0];
+                _teacherName = first.Length > 0 ? first : "معلم عزیز";
+            }
+        }
+        catch
+        {
+            // Greeting falls back to the neutral form when the profile is not set yet.
+        }
 
         _lessons = await Api.GetLessonsAsync();
     }

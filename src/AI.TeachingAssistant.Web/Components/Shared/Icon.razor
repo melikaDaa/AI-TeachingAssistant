@@ -1,0 +1,160 @@
+@* ---------- School of tiny inline SVG icons (16px grid, 1.6 stroke) ----------
+   One consistent stroke family replaces the emoji set. Usage:
+   <Icon Name="IconName.Lesson" Size="18" /> — names are an enum so typos
+   fail at compile time. All icons are decorative; text carries the meaning. *@
+<svg class="icon @CssClass" viewBox="0 0 24 24" width="@Size" height="@Size"
+     fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+     stroke-linejoin="round" aria-hidden="true" focusable="false">
+    @switch (Name)
+    {
+        case IconName.Dashboard:
+            <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2" />
+            <rect x="13" y="3.5" width="7.5" height="7.5" rx="2" />
+            <rect x="3.5" y="13" width="7.5" height="7.5" rx="2" />
+            <rect x="13" y="13" width="7.5" height="7.5" rx="2" />
+            break;
+
+        case IconName.Lesson:
+            @* open book *@
+            <path d="M12 6.5C10 4.8 6.8 4.2 3.5 4.5v13.4c3.3-.3 6.5.3 8.5 2 2-1.7 5.2-2.3 8.5-2V4.5c-3.3-.3-6.5.3-8.5 2z" />
+            <path d="M12 6.5v13.2" />
+            break;
+
+        case IconName.Content:
+            @* document with lines *@
+            <path d="M6 3.5h8.5L19 8v12.5H6z" />
+            <path d="M14 3.8V8.3h4.6" />
+            <path d="M9 12h6.5M9 15.5h6.5" />
+            break;
+
+        case IconName.Activity:
+            @* people / group *@
+            <circle cx="8.5" cy="8" r="2.6" />
+            <circle cx="16.5" cy="9.5" r="2" />
+            <path d="M3.5 19c.4-3 2.4-4.7 5-4.7s4.6 1.7 5 4.7" />
+            <path d="M15.5 14.6c2.3.2 4.3 1.7 4.9 4.4" />
+            break;
+
+        case IconName.Quiz:
+            @* clipboard with checkmarks *@
+            <rect x="5" y="4.5" width="14" height="16" rx="2.5" />
+            <path d="M9 4.5V3h6v1.5" />
+            <path d="M8.7 10.5l1.4 1.4 2.4-2.6" />
+            <path d="M8.7 15.5l1.4 1.4 2.4-2.6" />
+            <path d="M15 11h1.5M15 16h1.5" />
+            break;
+
+        case IconName.Image:
+            @* picture frame *@
+            <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+            <circle cx="9" cy="10" r="1.7" />
+            <path d="M4.5 17.5 10 12.5l4 3.5 3-2.5 2.5 2" />
+            break;
+
+        case IconName.Video:
+            @* play in frame *@
+            <rect x="3" y="5" width="18" height="14" rx="3" />
+            <path d="M10.2 9.2v5.6l4.8-2.8z" fill="currentColor" stroke="none" />
+            break;
+
+        case IconName.AI:
+            @* four-point spark — echoes the brand mark *@
+            <path d="M12 3.5 13.8 9.2 19.5 11 13.8 12.8 12 18.5 10.2 12.8 4.5 11 10.2 9.2z" />
+            <circle cx="18.5" cy="18.5" r="1.4" />
+            break;
+
+        case IconName.Regenerate:
+            @* circular arrow (↻) *@
+            <path d="M20 12a8 8 0 1 1-2.5-5.8" />
+            <path d="M20 3.5V8h-4.5" />
+            break;
+
+        case IconName.Edit:
+            <path d="M14.5 5.5 18.5 9.5 8.5 19.5H4.5v-4z" />
+            <path d="M12.8 7.2l4 4" />
+            break;
+
+        case IconName.Save:
+            <path d="M5 5h11l3 3v11H5z" />
+            <path d="M8.5 5v4.5h6V5" />
+            <rect x="8" y="13" width="8" height="6" rx="1" />
+            break;
+
+        case IconName.Copy:
+            <rect x="8.5" y="8.5" width="12" height="12" rx="2" />
+            <path d="M5.5 15.5h-1a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+            break;
+
+        case IconName.Settings:
+            @* gear *@
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.9 1.9M7.4 16.6l-1.9 1.9M18.5 18.5l-1.9-1.9M7.4 7.4 5.5 5.5" />
+            break;
+
+        case IconName.Teacher:
+            <circle cx="12" cy="7.5" r="3.2" />
+            <path d="M5 20c.5-4 3.2-6.3 7-6.3s6.5 2.3 7 6.3" />
+            break;
+
+        case IconName.Time:
+            <circle cx="12" cy="12" r="8.5" />
+            <path d="M12 7v5.3l3.4 2" />
+            break;
+
+        case IconName.Plus:
+            <path d="M12 5v14M5 12h14" />
+            break;
+
+        case IconName.ArrowLeft:
+            @* RTL "forward" arrow *@
+            <path d="M19 12H5" />
+            <path d="M11 6l-6 6 6 6" />
+            break;
+
+        case IconName.ArrowRight:
+            <path d="M5 12h14" />
+            <path d="M13 6l6 6-6 6" />
+            break;
+
+        case IconName.Bulb:
+            @* tip / idea *@
+            <path d="M9.5 18h5" />
+            <path d="M10 21h4" />
+            <path d="M12 3.2a6.3 6.3 0 0 0-3.6 11.5c.7.5 1.1 1.2 1.1 2h5c0-.8.4-1.5 1.1-2A6.3 6.3 0 0 0 12 3.2z" />
+            break;
+
+        case IconName.Bell:
+            <path d="M6 16v-5.2a6 6 0 0 1 12 0V16l1.5 2.2H4.5z" />
+            <path d="M10 20.5a2 2 0 0 0 4 0" />
+            break;
+
+        case IconName.Check:
+            <path d="M4.5 12.5 9.5 17.5 19.5 6.5" />
+            break;
+
+        case IconName.Home:
+            <path d="M4 11 12 4l8 7" />
+            <path d="M6 9.6V20h12V9.6" />
+            break;
+
+        case IconName.Trash:
+            <path d="M4.5 6.5h15" />
+            <path d="M8 6.5V4.5h8v2" />
+            <path d="M6.5 6.5 7.5 20h9l1-13.5" />
+            <path d="M10 10.5v6M14 10.5v6" />
+            break;
+
+        case IconName.Loader:
+            @* partial ring used with a CSS spin animation *@
+            <path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5" />
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public IconName Name { get; set; }
+
+    [Parameter] public int Size { get; set; } = 18;
+
+    [Parameter] public string? CssClass { get; set; }
+}

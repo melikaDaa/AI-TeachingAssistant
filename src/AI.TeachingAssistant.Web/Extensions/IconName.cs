@@ -1,0 +1,30 @@
+namespace AI.TeachingAssistant.Web.Extensions;
+
+/// <summary>Icons available to the <c>Icon.razor</c> component (one consistent stroke family).</summary>
+public enum IconName
+{
+    Dashboard,
+    Lesson,
+    Content,
+    Activity,
+    Quiz,
+    Image,
+    Video,
+    AI,
+    Regenerate,
+    Edit,
+    Save,
+    Copy,
+    Settings,
+    Teacher,
+    Time,
+    Plus,
+    ArrowLeft,
+    ArrowRight,
+    Bulb,
+    Bell,
+    Check,
+    Home,
+    Trash,
+    Loader,
+}

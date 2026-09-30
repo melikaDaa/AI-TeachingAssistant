@@ -1,0 +1,30 @@
+@* ---------- Original مدرس‌یار brand symbol ----------
+   Abstract mark: an open book (learning) whose two wings meet under a
+   four-point spark (AI assistance). Pure geometry — no mascot, no robot —
+   readable at 16px. Two-tone blue/purple flat fills. *@
+<svg class="brandmark @CssClass" viewBox="0 0 48 48" width="@Size" height="@Size" role="img" aria-label="نماد مدرس‌یار" focusable="false">
+    <title>مدرس‌یار</title>
+    @* open book: two asymmetric wings (RTL: stronger right wing) *@
+    <path d="M23 14.5 C18.5 10.5 12.5 9 7 9.6 L7 33.5 C12.5 32.9 18.5 34.4 23 38.4 Z"
+          fill="@PrimaryColor" />
+    <path d="M25 14.5 C29.5 10.5 35.5 9 41 9.6 L41 33.5 C35.5 32.9 29.5 34.4 25 38.4 Z"
+          fill="@AccentColor" />
+    @* AI spark rising from the book's center *@
+    <path d="M24 2 26.4 9.6 34 12 26.4 14.4 24 22 21.6 14.4 14 12 21.6 9.6 Z"
+          fill="#FFFFFF" stroke="@AccentColor" stroke-width="1.6" stroke-linejoin="round" />
+    @* base line: the desk / stability *@
+    <rect x="8" y="41.5" width="32" height="3" rx="1.5" fill="@AccentColor" opacity="0.35" />
+</svg>
+
+@code {
+    /// <summary>Pixel size of the square mark.</summary>
+    [Parameter, EditorRequired] public int Size { get; set; } = 28;
+
+    /// <summary>Optional tint override (e.g. white on dark surfaces).</summary>
+    [Parameter] public string? Tint { get; set; }
+
+    [Parameter] public string? CssClass { get; set; }
+
+    private string PrimaryColor => Tint ?? "#2732C6";
+    private string AccentColor => Tint is null ? "#702DC5" : Tint;
+}

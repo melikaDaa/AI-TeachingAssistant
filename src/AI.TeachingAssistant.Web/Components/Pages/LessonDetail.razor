@@ -5,35 +5,35 @@
 
 @if (_error is not null)
 {
-    <div class="error-banner">@_error</div>
-    <a class="btn ghost" href="/lessons">→ بازگشت به درس‌ها</a>
+    <div class="error-banner" role="alert"><Icon Name="IconName.Bell" Size="17" /> @_error</div>
+    <a class="btn ghost" href="/lessons">بازگشت به درس‌ها <Icon Name="IconName.ArrowRight" Size="16" /></a>
 }
 else if (_package is null)
 {
-    <div class="empty"><span class="big">⏳</span>در حال بارگذاری...</div>
+    <div class="empty"><span class="big"><Icon Name="IconName.Loader" Size="26" CssClass="spin" /></span>در حال بارگذاری...</div>
 }
 else if (_package.Progress.Status == "ready")
 {
-    @* ---------- Ready: assistant celebration header (§20) ---------- *@
+    @* ---------- Ready: structured educational workspace header (PART 11) ---------- *@
     <div class="page-head">
         <div class="grow">
-            <h1>🎉 محتوای کلاس شما آماده است</h1>
-            <p class="page-sub">@_package.LessonTitle</p>
+            <h1>@_package.LessonTitle</h1>
+            <p class="page-sub">محتوای آماده‌ی کلاس — مدرس‌یار ساخته، شما بازبینی و ویرایش می‌کنید.</p>
         </div>
-        <a class="btn ghost" href="/lessons">→ درس‌های من</a>
+        <a class="btn ghost" href="/lessons">درس‌های من <Icon Name="IconName.ArrowRight" Size="16" /></a>
     </div>
 
     @if (_summary is not null)
     {
         <div class="chip-row">
-            <span class="chip">📗 @_summary.Value.subject</span>
-            <span class="chip">🎓 پایه @_summary.Value.grade</span>
-            <span class="chip">🧩 @_summary.Value.topic</span>
-            <span class="chip">⏱ @_summary.Value.duration.ToPersianDigits() دقیقه</span>
+            <span class="chip"><Icon Name="IconName.Content" Size="14" /> @_summary.Value.subject</span>
+            <span class="chip"><Icon Name="IconName.Teacher" Size="14" /> پایه @_summary.Value.grade</span>
+            <span class="chip"><Icon Name="IconName.Lesson" Size="14" /> @_summary.Value.topic</span>
+            <span class="chip"><Icon Name="IconName.Time" Size="14" /> @_summary.Value.duration.ToPersianDigits() دقیقه</span>
         </div>
     }
 
-    <TeachingPackageView @ref="_view" Package="_package" />
+    <TeachingPackageView @ref="_view" Package="_package" OnCompleted="ReloadPackageAsync" />
 }
 else
 {
@@ -43,10 +43,10 @@ else
             <h1>@_package.LessonTitle</h1>
             <p class="page-sub">بسته آموزشی درس</p>
         </div>
-        <a class="btn ghost" href="/lessons">→ درس‌های من</a>
+        <a class="btn ghost" href="/lessons">درس‌های من <Icon Name="IconName.ArrowRight" Size="16" /></a>
     </div>
 
-    <TeachingPackageView @ref="_view" Package="_package" />
+    <TeachingPackageView @ref="_view" Package="_package" OnCompleted="ReloadPackageAsync" />
 }
 
 @code {
@@ -68,7 +68,7 @@ else
             }
             else if (_package.Progress.Status == "ready")
             {
-                // Summary chips come from the existing lessons list API (UI-only, §20).
+                // Summary chips come from the existing lessons list API (UI-only).
                 var lessons = await Api.GetLessonsAsync();
                 var match = lessons?.FirstOrDefault(l => l.Id == Id);
                 if (match is not null)
@@ -83,16 +83,35 @@ else
         }
     }
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnAfterRenderAsync(bool _)
     {
-        // Component refs exist only after render; start polling here.
-        // "draft" covers the brief window between lesson creation and the
-        // generation job flipping the status to "generating".
-        if (firstRender && _package is not null && _package.Progress.Status is "generating" or "draft")
+        // Start polling on the render that actually carries data. The first render happens
+        // while _package is still null (the fetch is in flight), so gating on firstRender
+        // alone would never start the timer. StartPolling is idempotent.
+        // "draft" covers the brief window between lesson creation and the generation job.
+        if (_package is not null && _package.Progress.Status is "generating" or "draft")
         {
             _view?.StartPolling();
         }
 
         return Task.CompletedTask;
+    }
+
+    // Called by TeachingPackageView when generation finishes, so the page header
+    // switches to the ready state (and summary chips load) without a manual reload.
+    private async Task ReloadPackageAsync()
+    {
+        var fresh = await Api.GetLessonAsync(Id);
+        if (fresh is not null) _package = fresh;
+
+        if (_summary is null)
+        {
+            var lessons = await Api.GetLessonsAsync();
+            var match = lessons?.FirstOrDefault(l => l.Id == Id);
+            if (match is not null)
+            {
+                _summary = (match.Subject, match.Grade, match.Topic, match.DurationMinutes);
+            }
+        }
     }
 }

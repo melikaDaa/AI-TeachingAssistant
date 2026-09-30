@@ -4,15 +4,21 @@
 @inject MadreseAIApiClient Api
 @inject IJSRuntime JS
 
+@* ---------- Generated content workspace (PART 11–13) ----------
+   Tabs = the six supported sections. The active section renders as a
+   section card; regenerate swaps ONLY the active section into a small
+   in-place loading state while other tabs stay browsable. A failed
+   regenerate keeps the stored section visible below the error. *@
 <div class="tabs" role="tablist">
-    @foreach (var s in SectionMeta.All)
+    @foreach (var s in VisibleSections)
     {
         var has = HasSection(s.Code);
-        <button type="button" class="tab @(ActiveKey == s.Key ? "active" : "")" @onclick="() => Activate(s.Key)">
-            @s.Emoji @s.Title
+        <button type="button" role="tab" aria-selected="@(ActiveKey == s.Key)" class="tab @(ActiveKey == s.Key ? "active" : "")" @onclick="() => Activate(s.Key)">
+            <Icon Name="@SectionMeta.IconOf(s.Code)" Size="16" />
+            @s.Title
             @if (has)
             {
-                <span class="dot">●</span>
+                <span class="dot" title="آماده"><Icon Name="IconName.Check" Size="12" /></span>
             }
         </button>
     }
@@ -20,30 +26,36 @@
 
 @if (_error is not null)
 {
-    <div class="error-banner">@_error</div>
+    <div class="error-banner" role="alert">
+        <Icon Name="IconName.Bell" Size="17" /> @_error
+    </div>
 }
 
 @if (Package.Progress.Status is "generating" or "draft")
 {
-    <div class="progress-wrap card">
-        <div class="progress-ring"></div>
-        <div class="progress-msg">✨ مدرس‌یار در حال آماده‌سازی کلاس شماست</div>
+    @* ---------- Full generation loading (PART 10): restrained, brand symbol, no fake % ---------- *@
+    <div class="card progress-wrap">
+        <div class="progress-mark"><BrandMark Size="40" /></div>
+        <div class="progress-msg">@CurrentProgressMessage</div>
         <div class="progress-sub">این کار ممکن است کمی طول بکشد؛ همین صفحه به‌صورت خودکار به‌روزرسانی می‌شود.</div>
         <div class="progress-steps">
-            <span class="pill done">✓ اطلاعات کلاس بررسی شد</span>
-            <span class="pill done">✓ ساختار درس آماده شد</span>
-            @foreach (var s in SectionMeta.All)
+            @{
+                var currentKey = CurrentSectionKey;
+            }
+            <span class="pill done"><Icon Name="IconName.Check" Size="13" /> اطلاعات کلاس بررسی شد</span>
+            <span class="pill done"><Icon Name="IconName.Check" Size="13" /> ساختار درس آماده شد</span>
+            @foreach (var s in VisibleSections)
             {
                 var done = CompletedKeys.Contains(s.Key);
-                var current = CurrentSectionKey == s.Key;
+                var current = currentKey == s.Key;
                 <span class="pill @(done ? "done" : (current ? "current" : ""))">
                     @if (done)
                     {
-                        <text>✓ </text>
+                        <Icon Name="IconName.Check" Size="13" />
                     }
                     else
                     {
-                        <text>○ </text>
+                        <Icon Name="@SectionMeta.IconOf(s.Code)" Size="13" />
                     }
                     @s.Title
                 </span>
@@ -51,84 +63,125 @@
         </div>
     </div>
 }
-else if (Package.Progress.Status == "failed")
-{
-    <div class="error-banner">
-        @(Package.Progress.Error ?? "در تولید محتوا مشکلی پیش آمد. لطفاً دوباره تلاش کنید.")
-    </div>
-    <div class="section-toolbar">
-        <button type="button" class="btn small" @onclick="RegenerateCurrent">🔄 تلاش دوباره برای «@(ActiveSection?.Title)»</button>
-    </div>
-}
 else
 {
-    <div class="card">
-        @switch (ActiveKey)
-        {
-            case "lesson-plan" when Package.LessonPlan is not null:
-                <LessonPlanView Plan="Package.LessonPlan" />
-                break;
-            case "content" when Package.EducationalContent is not null:
-                <EducationalContentView Content="Package.EducationalContent" />
-                break;
-            case "activity" when Package.Activity is not null:
-                <ActivityView Activity="Package.Activity" />
-                break;
-            case "quiz" when Package.Quiz is not null:
-                <QuizView Quiz="Package.Quiz" />
-                break;
-            case "image-prompt" when Package.Media.ImagePrompts.Count > 0:
-                <h2>پرامپت‌های تصویر</h2>
-                @foreach (var img in Package.Media.ImagePrompts)
-                {
-                    <PromptCard Title="@img.Title" Image="@img" />
-                }
-                break;
-            case "video-prompt" when Package.Media.VideoPrompt is not null:
-                <PromptCard Title="@Package.Media.VideoPrompt.Title" Video="@Package.Media.VideoPrompt" />
-                break;
-            default:
-                <div class="empty">
-                    <span class="big">✨</span>
-                    این بخش هنوز ساخته نشده است.
-                    <div style="margin-top:.6rem">
-                        <button type="button" class="btn small" @onclick="RegenerateCurrent">✨ ساخت همین بخش</button>
-                    </div>
-                </div>
-                break;
-        }
-    </div>
+    var failed = Package.Progress.Status == "failed";
+    var hasActive = HasSection(ActiveSection?.Code ?? 0);
 
-    @if (ActiveSection is not null && HasSection(ActiveSection.Code))
+    @* ---------- Error banner stays above the workspace (PART 27-7) ---------- *@
+    @if (failed)
     {
+        <div class="error-banner" role="alert">
+            <Icon Name="IconName.Bell" Size="17" />
+            @(Package.Progress.Error ?? "در تولید محتوا مشکلی پیش آمد. لطفاً دوباره تلاش کنید.")
+        </div>
         <div class="section-toolbar">
-            <button type="button" class="btn ghost small" @onclick="CopyActive">📋 کپی متن</button>
-            @if (CanEditActive)
+            <button type="button" class="btn small" disabled="@_regenerating" @onclick="RegenerateCurrent" title="نسخه‌ای جدید و متفاوت از این بخش ساخته می‌شود.">
+                <Icon Name="IconName.Regenerate" Size="15" /> تلاش دوباره برای «@(ActiveSection?.Title)»
+            </button>
+            @if (hasActive)
             {
-                <button type="button" class="btn ghost small" @onclick="StartEdit">✏️ ویرایش</button>
-            }
-            <button type="button" class="btn ghost small" @onclick="RegenerateCurrent">🔄 تولید مجدد این بخش</button>
-            <span class="spacer"></span>
-            @if (_copyState == CopyState.Copied)
-            {
-                <span class="edited-note">✓ کپی شد</span>
-            }
-            @if (_saveState == SaveState.Saved)
-            {
-                <span class="edited-note">✓ ذخیره شد</span>
+                <span class="keep-note">نسخه‌ی قبلی این بخش محفوظ مانده است.</span>
             }
         </div>
+    }
 
-        @if (_editing)
+    @if (_regenerating)
+    {
+        @* ---------- In-place regenerate loading (PART 13): ONLY this section spins;
+            other tabs stay visible and the previous content remains reachable ---------- *@
+        <div class="card progress-wrap" style="padding:2.2rem 1rem">
+            <div class="progress-mark"><BrandMark Size="36" /></div>
+            <div class="progress-msg">در حال تولید @(ActiveSection switch { null => "محتوای جایگزین", var t => $"یک {t.Title} جایگزین" })...</div>
+            <div class="progress-sub">بخش‌های دیگر تغییر نمی‌کنند؛ نسخه‌ی فعلی تا آماده شدن نسخه‌ی جدید باقی می‌ماند.</div>
+        </div>
+    }
+    else if (!failed || hasActive)
+    {
+        @* ---------- Section card (PART 12) — also shown after a failed regenerate
+            so the teacher never loses sight of their stored content ---------- *@
+        <div class="card">
+            <div class="card-head">
+                <span class="card-icon"><Icon Name="@SectionMeta.IconOf(ActiveSection?.Code ?? 0)" Size="19" /></span>
+                <div class="grow">
+                    <h2 style="font-size:1.2rem">@(ActiveSection?.Title)</h2>
+                    <p class="page-sub" style="margin:0; font-size:.86rem">@SectionMetaDescription</p>
+                </div>
+            </div>
+
+            <div class="card-body">
+                @switch (ActiveKey)
+                {
+                    case "lesson-plan" when Package.LessonPlan is not null:
+                        <LessonPlanView Plan="Package.LessonPlan" />
+                        break;
+                    case "content" when Package.EducationalContent is not null:
+                        <EducationalContentView Content="Package.EducationalContent" />
+                        break;
+                    case "activity" when Package.Activity is not null:
+                        <ActivityView Activity="Package.Activity" />
+                        break;
+                    case "quiz" when Package.Quiz is not null:
+                        <QuizView Quiz="Package.Quiz" />
+                        break;
+                    case "image-prompt" when Package.Media.ImagePrompts.Count > 0:
+                        @foreach (var img in Package.Media.ImagePrompts)
+                        {
+                            <PromptCard Title="@img.Title" Image="@img" />
+                        }
+                        break;
+                    case "video-prompt" when Package.Media.VideoPrompt is not null:
+                        <PromptCard Title="@Package.Media.VideoPrompt.Title" Video="@Package.Media.VideoPrompt" />
+                        break;
+                    default:
+                        <div class="empty">
+                            <span class="big"><BrandMark Size="46" /></span>
+                            این بخش هنوز ساخته نشده است.
+                            <div style="margin-top:.6rem">
+                                <button type="button" class="btn small" disabled="@_regenerating" @onclick="RegenerateCurrent">
+                                    <Icon Name="IconName.AI" Size="15" /> ساخت همین بخش
+                                </button>
+                            </div>
+                        </div>
+                        break;
+                }
+            </div>
+        </div>
+
+        @if (ActiveSection is not null && HasSection(ActiveSection.Code))
         {
-            <div class="edit-note">
-                متن‌ها را آزادانه تغییر دهید؛ ساختار JSON را حفظ کنید. پس از اتمام «ذخیره» را بزنید.
-            </div>
-            <textarea class="payload-editor" @bind="_payload"></textarea>
             <div class="section-toolbar">
-                <button type="button" class="btn small" @onclick="SaveEdit">💾 ذخیره</button>
-                <button type="button" class="btn ghost small" @onclick="() => _editing = false">انصراف</button>
+                <button type="button" class="btn ghost small" @onclick="CopyActive"><Icon Name="IconName.Copy" Size="15" /> کپی متن</button>
+                @if (CanEditActive)
+                {
+                    <button type="button" class="btn ghost small" @onclick="StartEdit"><Icon Name="IconName.Edit" Size="15" /> ویرایش</button>
+                }
+                <button type="button" class="btn ghost small" disabled="@_regenerating" @onclick="RegenerateCurrent" title="یک نسخه‌ی متفاوت از همین بخش ساخته می‌شود؛ هدف‌های درس و بخش‌های دیگر تغییر نمی‌کنند.">
+                    <Icon Name="IconName.Regenerate" Size="15" /> تولید مجدد
+                </button>
+                <span class="spacer"></span>
+                @if (_copyState == CopyState.Copied)
+                {
+                    <span class="edited-note"><Icon Name="IconName.Check" Size="14" /> کپی شد</span>
+                }
+                @if (_saveState == SaveState.Saved)
+                {
+                    <span class="edited-note"><Icon Name="IconName.Check" Size="14" /> ذخیره شد — شما مالک نهایی محتوا هستید</span>
+                }
             </div>
+
+            @if (_editing)
+            {
+                @* ---------- Teacher owns the content (PART 15) ---------- *@
+                <div class="edit-note">
+                    متن‌ها را آزادانه تغییر دهید؛ ساختار JSON را حفظ کنید. پس از اتمام «ذخیره» را بزنید.
+                </div>
+                <textarea class="payload-editor" @bind="_payload" aria-label="ویرایش محتوای بخش"></textarea>
+                <div class="section-toolbar">
+                    <button type="button" class="btn small" @onclick="SaveEdit"><Icon Name="IconName.Save" Size="15" /> ذخیره</button>
+                    <button type="button" class="btn ghost small" @onclick="() => _editing = false">انصراف</button>
+                </div>
+            }
         }
     }
 }
@@ -139,12 +192,16 @@ else
 
     [Parameter, EditorRequired] public TeachingPackageDto Package { get; set; } = null!;
 
+    /// <summary>Invoked once when a generation run finishes, so the parent page can refresh its header.</summary>
+    [Parameter] public EventCallback OnCompleted { get; set; }
+
     private string _activeKey = "lesson-plan";
     private bool _editing;
     private string _payload = string.Empty;
     private SaveState _saveState = SaveState.Clean;
     private CopyState _copyState = CopyState.None;
     private string? _error;
+    private bool _regenerating;
     private System.Timers.Timer? _pollTimer;
     private int _pollSeq;
 
@@ -162,6 +219,22 @@ else
 
     private SectionMeta.Info? ActiveSection => SectionMeta.ByKey(ActiveKey);
 
+    /// <summary>Short per-section description shown under the card title (PART 12 metadata).</summary>
+    private string SectionMetaDescription => ActiveSection?.Code switch
+    {
+        1 => "برنامه زمان‌بندی‌شده کلاس با هدف‌ها و تکلیف",
+        2 => "توضیح آماده برای تدریس شفاهی در کلاس",
+        3 => "فعالیت تعاملی قابل اجرا با وسایل ساده",
+        4 => "۵ سؤال گزینه‌ای + ۳ سؤال کوتاه با پاسخ‌نامه",
+        5 => "۲ پرامپت آماده برای ابزار تولید تصویر",
+        6 => "۱ پرامپت آماده برای ابزار تولید ویدئو",
+        _ => string.Empty,
+    };
+
+    /// <summary>Only sections the teacher actually requested get a tab (spec §17).</summary>
+    private IEnumerable<SectionMeta.Info> VisibleSections => SectionMeta.All
+        .Where(s => Package.RequestedSections.Count == 0 || Package.RequestedSections.Contains(s.Code));
+
     private bool CanEditActive => ActiveSection?.Code is 1 or 2 or 3 or 4;
 
     private List<string> CompletedKeys => Package.Progress.CompletedSections
@@ -169,29 +242,28 @@ else
         .Where(n => n > 0)
         .Select(SectionMeta.ByCode)
         .Select(s => s.Key)
+        .Where(key => VisibleSections.Any(s => s.Key == key))
         .ToList();
 
     private string CurrentSectionKey
     {
         get
         {
-            var byName = SectionMeta.All.FirstOrDefault(s => s.Title == Package.Progress.CurrentSection)?.Key;
+            var byName = VisibleSections.FirstOrDefault(s => s.Title == Package.Progress.CurrentSection)?.Key;
             if (byName is not null) return byName;
             var last = CompletedKeys.LastOrDefault();
             if (last is not null)
             {
-                var list = SectionMeta.All.ToList();
+                var list = VisibleSections.ToList();
                 var idx = list.FindIndex(s => s.Key == last);
                 if (idx >= 0 && idx + 1 < list.Count) return list[idx + 1].Key;
             }
-            return SectionMeta.All[0].Key;
+            return VisibleSections.First().Key;
         }
     }
 
     private string CurrentProgressMessage =>
-        SectionMeta.ByKey(CurrentSectionKey)?.ProgressMessage ?? "در حال آماده‌سازی محتوا...";
-
-    private int ParseCode(string key) => SectionMeta.ByKey(key)?.Code ?? 0;
+        SectionMeta.ByKey(CurrentSectionKey)?.ProgressMessage ?? "در حال آماده‌سازی محتوای آموزشی...";
 
     private bool HasSection(int code) => code switch
     {
@@ -225,7 +297,12 @@ else
                     await InvokeAsync(StateHasChanged);
                     if (Package.Progress.Status is "ready" or "failed")
                     {
+                        _regenerating = false;
                         StopPolling();
+                        if (Package.Progress.Status == "ready")
+                        {
+                            await InvokeAsync(async () => await OnCompleted.InvokeAsync());
+                        }
                     }
                 }
             }
@@ -307,6 +384,7 @@ else
         try
         {
             await Api.StartSectionGenerationAsync(Package.LessonId, ActiveKey);
+            _regenerating = true;
             Package = Package with
             {
                 Progress = new GenerationProgressDto("generating", ActiveSection?.Title ?? "", Package.Progress.CompletedSections, null),
@@ -315,6 +393,7 @@ else
         }
         catch (MadreseAIApiException ex)
         {
+            _regenerating = false;
             _error = ex.Message;
         }
     }

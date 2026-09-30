@@ -12,4 +12,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Same AI configuration as the Api host (Provider/ApiKey/BaseUrl/Model),
+         so the integrated single-process host reads one source of truth. -->
+    <None Include="..\AI.TeachingAssistant.Api\appsettings.json" Link="appsettings.json" />
+    <None Include="..\AI.TeachingAssistant.Api\appsettings.Development.json" Link="appsettings.Development.json" />
+  </ItemGroup>
+
 </Project>

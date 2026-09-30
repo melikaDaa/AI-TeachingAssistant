@@ -1,26 +1,121 @@
 @inherits LayoutComponentBase
+@inject MadreseAIApiClient Api
+@inject NavigationManager Nav
 
-<div class="app-shell">
-    <header class="top-nav">
-        <NavLink class="brand" href="/">
-            <span class="brand-icon">🎓</span>
-            <span class="brand-name">مدرس‌یار</span>
-            <span class="brand-sub">دستیار هوشمند معلم</span>
+<div class="shell">
+    @* ---------- Sidebar (RTL: right side, desktop only) ---------- *@
+    <aside class="sidebar" aria-label="ناوبری اصلی">
+        <NavLink class="sidebar-brand" href="/">
+            <BrandMark Size="38" />
+            <span>
+                <span class="brand-name">مدرس‌یار</span>
+                <span class="brand-sub">دستیار هوشمند معلمان</span>
+            </span>
         </NavLink>
 
-        <nav class="nav-links">
-            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All"><span>🏠</span> خانه</NavLink>
-            <NavLink class="nav-link" href="/lessons"><span>📚</span> درس‌های من</NavLink>
-            <NavLink class="nav-link" href="/lessons/new"><span>✨</span> ساخت محتوای جدید</NavLink>
-            <NavLink class="nav-link" href="/profile"><span>👤</span> پروفایل</NavLink>
+        <nav class="side-links">
+            <NavLink class="side-link" href="/" Match="NavLinkMatch.All">
+                <Icon Name="IconName.Dashboard" Size="19" /> داشبورد
+            </NavLink>
+            <NavLink class="side-link" href="/lessons/new">
+                <Icon Name="IconName.Plus" Size="19" /> ساخت محتوای جدید
+            </NavLink>
+            <NavLink class="side-link" href="/lessons">
+                <Icon Name="IconName.Lesson" Size="19" /> درس‌های من
+            </NavLink>
+            <NavLink class="side-link" href="/profile">
+                <Icon Name="IconName.Teacher" Size="19" /> پروفایل معلم
+            </NavLink>
         </nav>
-    </header>
 
-    <main class="page">
-        @Body
-    </main>
+        <hr class="sidebar-sep" />
 
-    <footer class="footer">
-        مدرس‌یار — دستیار هوشمند معلم — نسخه آزمایشی برای معلمان
-    </footer>
+        <div class="side-links">
+            <span class="side-link" style="cursor:default" aria-disabled="true">
+                <Icon Name="IconName.Settings" Size="19" /> تنظیمات
+            </span>
+        </div>
+
+        <div class="sidebar-foot">نسخه آزمایشی · v1.0</div>
+    </aside>
+
+    <div class="main-area">
+        @* ---------- Slim top header ---------- *@
+        <header class="top-header">
+            <a class="mobile-brand" href="/">
+                <BrandMark Size="30" /> مدرس‌یار
+            </a>
+            <span class="page-title-sm grow">@_pageTitle</span>
+            <a class="header-icon-btn" href="/lessons/new" title="ساخت محتوای جدید" aria-label="ساخت محتوای جدید">
+                <Icon Name="IconName.Plus" Size="19" />
+            </a>
+            <a class="header-teacher" href="/profile" title="پروفایل معلم">
+                <span class="avatar"><Icon Name="IconName.Teacher" Size="16" /></span>
+                @_teacherName
+            </a>
+        </header>
+
+        @* ---------- Mobile navigation strip (tablet/phone) ---------- *@
+        <nav class="mobile-nav" aria-label="ناوبری موبایل">
+            <NavLink class="side-link" href="/" Match="NavLinkMatch.All">
+                <Icon Name="IconName.Dashboard" Size="18" /> داشبورد
+            </NavLink>
+            <NavLink class="side-link" href="/lessons/new">
+                <Icon Name="IconName.Plus" Size="18" /> ساخت
+            </NavLink>
+            <NavLink class="side-link" href="/lessons">
+                <Icon Name="IconName.Lesson" Size="18" /> درس‌ها
+            </NavLink>
+            <NavLink class="side-link" href="/profile">
+                <Icon Name="IconName.Teacher" Size="18" /> پروفایل
+            </NavLink>
+        </nav>
+
+        <main class="page">
+            @Body
+        </main>
+
+        <footer class="footer">
+            مدرس‌یار — دستیار هوشمند معلم — نسخه آزمایشی برای معلمان
+        </footer>
+    </div>
 </div>
+
+@code {
+    private string _pageTitle = "مدرس‌یار";
+    private string _teacherName = "معلم عزیز";
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        _pageTitle = ResolveTitle();
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => _pageTitle = ResolveTitle();
+
+    // Contextual page title in the slim header (PART 2). The route's own
+    // <PageTitle> stays for the browser tab; this keeps the header informative.
+    private string ResolveTitle() => Nav.Uri switch
+    {
+        var u when u.EndsWith("/lessons/new") => "ساخت محتوای آموزشی",
+        var u when u.EndsWith("/lessons") => "درس‌های من",
+        var u when u.Contains("/lessons/") => "بسته آموزشی درس",
+        var u when u.EndsWith("/profile") => "پروفایل معلم",
+        _ => "داشبورد",
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var teacher = await Api.GetTeacherAsync();
+            if (teacher is not null && !string.IsNullOrWhiteSpace(teacher.FullName))
+                _teacherName = teacher.FullName;
+        }
+        catch
+        {
+            // Header stays with the neutral greeting if the profile is not reachable yet.
+        }
+    }
+}

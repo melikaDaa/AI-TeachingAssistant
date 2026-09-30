@@ -17,4 +17,16 @@ public static class SectionMeta
 
     public static Info? ByKey(string key) => All.FirstOrDefault(s => s.Key == key);
     public static Info ByCode(int code) => All.First(s => s.Code == code);
+
+    /// <summary>Maps each section to the shared SVG icon family (no emoji).</summary>
+    public static IconName IconOf(int code) => code switch
+    {
+        1 => IconName.Lesson,
+        2 => IconName.Content,
+        3 => IconName.Activity,
+        4 => IconName.Quiz,
+        5 => IconName.Image,
+        6 => IconName.Video,
+        _ => IconName.Content,
+    };
 }

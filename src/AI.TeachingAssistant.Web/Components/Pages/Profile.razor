@@ -3,7 +3,7 @@
 
 <PageTitle>مدرس‌یار — پروفایل</PageTitle>
 
-<h1>👤 پروفایل معلم</h1>
+<h1><Icon Name="IconName.Teacher" Size="24" CssClass="icon-title" /> پروفایل معلم</h1>
 <p class="page-sub">این مشخصات به‌صورت خودکار در تولید محتوا استفاده می‌شود.</p>
 
 @if (_error is not null)
@@ -54,12 +54,14 @@
             </select>
         </div>
 
-        <button type="button" class="btn" @onclick="Save" disabled="@_saving">💾 ذخیره پروفایل</button>
+        <button type="button" class="btn" @onclick="Save" disabled="@_saving">
+            <Icon Name="IconName.Save" Size="16" /> ذخیره پروفایل
+        </button>
     </div>
 }
 else
 {
-    <div class="empty"><span class="big">⏳</span>در حال بارگذاری...</div>
+    <div class="empty"><span class="big"><Icon Name="IconName.Loader" Size="26" CssClass="spin" /></span>در حال بارگذاری...</div>
 }
 
 @code {
