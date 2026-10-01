@@ -57,7 +57,7 @@ OpenAiCompatibleProvider  →  xKiro (https://api.xkiro.com/v1)
 - فعال‌سازی xKiro: `AI_PROVIDER=xkiro` + `AI_API_KEY` (یا `XKIRO_API_KEY`)
 - **API Key: فقط Environment Variable / Secret Manager** — هرگز در repo، log یا exception
 - Model از `AI_MODEL` (پیش‌فرض `qwen/qwen3.5-flash:free`؛ فرمت vendor/model از کاتالوگ xKiro)؛ Base URL از `AI_BASE_URL` (پیش‌فرض xKiro)
-- مدل جایگزین از `AI_FALLBACK_MODEL` / کلید `AI:FallbackModel` (پیش‌فرض خالی = failover غیرفعال)؛ در فاز ۳ فقط برای خطاهای گذرای دسترس‌پذیری (timeout/شبکه/429/5xx) یک تلاش واحد با همان قرارداد درخواست روی مدل جایگزین انجام می‌شود — `qwen/qwen3.5-plus:free` در کاتالوگ و اجرای واقعی xKiro تأیید شده است
+- مدل جایگزین از `AI_FALLBACK_MODEL` / کلید `AI:FallbackModel` (پیش‌فرض خالی = failover غیرفعال)؛ در فاز ۳ فقط برای خطاهای گذرای دسترس‌پذیری (timeout/شبکه/429/5xx) یک تلاش واحد با همان قرارداد درخواست روی مدل جایگزین انجام می‌شود — `qwen/qwen3.7-flash:free` در کاتالوگ و اجرای واقعی xKiro تأیید شده است
 - Prompt Builder جدا برای هر بخش در `src/AI.TeachingAssistant.Application/Prompts/`
 - خروجی AI با `AiResponseValidator` اعتبارسنجی می‌شود (۱ retry؛ invalid JSON → تلاش دوم → در صورت شکست Failed)
 - هر builder پرامپت یک `Temperature` اختصاصی دارد (آزمون 0.3؛ طرح/محتوا 0.7؛ فعالیت/پرامپت‌ها 0.8)؛ بعد از هر بخش، زمینه فشرده‌ای از طرح درس/محتوای همان بسته (`SharedLessonContext`) به پرامپت بخش‌های بعدی تزریق می‌شود؛ کنترل خلوص زبان فارسی (نویسه‌های زبان‌های دیگر / لاتین بیرون از «فارسی (English)»؛ اندازه‌های کاغذ مثل A4 مجازند) و retry خطاهای گذرای Provider نیز در `SectionGenerationService` است؛ مصرف توکن واقعی هر فراخوانی از `usage` گیت‌وی خوانده و لاگ می‌شود (`AiResponse.Usage` + خط `Token usage for …`)
