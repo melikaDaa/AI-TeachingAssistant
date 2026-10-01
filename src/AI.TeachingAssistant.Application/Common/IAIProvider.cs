@@ -7,8 +7,15 @@ public sealed record AiRequest(
     int MaxTokens = 2000,
     double Temperature = 0.7);
 
-/// <summary>Raw text response from the AI provider.</summary>
-public sealed record AiResponse(string Content);
+/// <summary>
+/// Token accounting reported by the provider for one call. Nullable on <see cref="AiResponse"/>
+/// because not every provider/gateway returns usage (the offline mock never does);
+/// it is never invented when the provider omits it.
+/// </summary>
+public sealed record AiUsage(int PromptTokens, int CompletionTokens, int TotalTokens);
+
+/// <summary>Raw text response from the AI provider, with optional token accounting.</summary>
+public sealed record AiResponse(string Content, AiUsage? Usage = null);
 
 /// <summary>
 /// Thrown when an AI call fails (timeout, network, rate limit, empty response, ...).

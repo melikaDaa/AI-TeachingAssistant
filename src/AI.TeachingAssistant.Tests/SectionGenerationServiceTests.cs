@@ -31,6 +31,14 @@ internal sealed class GarbageProvider : IAIProvider
         => Task.FromResult(new AiResponse("متاسفانه نمی‌توانم پاسخ JSON بدهم"));
 }
 
+/// <summary>A provider that always returns one fixed JSON payload (language-guard tests).</summary>
+internal sealed class FixedJsonProvider(string json) : IAIProvider
+{
+    public string Name => "fixed";
+    public Task<AiResponse> CompleteAsync(AiRequest request, CancellationToken cancellationToken = default)
+        => Task.FromResult(new AiResponse(json));
+}
+
 public class SectionGenerationServiceTests
 {
     private static GenerationContext Context() => new(
@@ -72,5 +80,34 @@ public class SectionGenerationServiceTests
         var result = await service.GenerateQuizAsync(Context());
         Assert.True(result.Ok, result.Error);
         Assert.Equal(8, result.Value!.Questions.Count);
+    }
+
+    /// <summary>
+    /// Phase 2 regression: «برگه A4» is a standard classroom term. The language guard used to
+    /// reject it as leaked Latin and burned a retry per attempt (10/10 false positives observed
+    /// on the activity section in one real session).
+    /// </summary>
+    [Fact]
+    public async Task Paper_Size_A4_In_Persian_Text_Is_Not_A_Foreign_Leak()
+    {
+        const string activity = """
+            {"title":"کارگاه گروهی سلول","objective":"تثبیت مفهوم سلول","materials":["برگه A4 سفید","مداد رنگی"],"studentCount":"گروه‌های ۴ نفره","durationMinutes":15,"instructions":["گام ۱: گروه‌بندی کنید","گام ۲: هر گروه بخش‌های سلول را بکشد","گام ۳: هر گروه نتیجه را ارائه دهد","گام ۴: جمع‌بندی روی تخته"],"expectedResult":"هر گروه یک نقشه‌ی سلول ارائه می‌کند"}
+            """;
+        var service = new SectionGenerationService(new FixedJsonProvider(activity));
+        var result = await service.GenerateActivityAsync(Context());
+        Assert.True(result.Ok, result.Error);
+    }
+
+    /// <summary>The original leak («سلول‌های Tiny») must still be rejected after the whitelist.</summary>
+    [Fact]
+    public async Task Stray_Latin_Word_Is_Still_Rejected()
+    {
+        const string activity = """
+            {"title":"کارگاه گروهی سلول","objective":"تثبیت مفهوم سلول","materials":["سلول‌های Tiny","مداد رنگی"],"studentCount":"گروه‌های ۴ نفره","durationMinutes":15,"instructions":["گام ۱: گروه‌بندی کنید","گام ۲: هر گروه بخش‌های سلول را بکشد","گام ۳: هر گروه نتیجه را ارائه دهد","گام ۴: جمع‌بندی روی تخته"],"expectedResult":"هر گروه یک نقشه‌ی سلول ارائه می‌کند"}
+            """;
+        var service = new SectionGenerationService(new FixedJsonProvider(activity));
+        var result = await service.GenerateActivityAsync(Context());
+        Assert.False(result.Ok);
+        Assert.Contains("زبان‌های دیگر", result.Error);
     }
 }

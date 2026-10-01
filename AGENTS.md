@@ -59,7 +59,7 @@ OpenAiCompatibleProvider  →  xKiro (https://api.xkiro.com/v1)
 - Model از `AI_MODEL` (پیش‌فرض `qwen/qwen3.5-flash:free`؛ فرمت vendor/model از کاتالوگ xKiro)؛ Base URL از `AI_BASE_URL` (پیش‌فرض xKiro)
 - Prompt Builder جدا برای هر بخش در `src/AI.TeachingAssistant.Application/Prompts/`
 - خروجی AI با `AiResponseValidator` اعتبارسنجی می‌شود (۱ retry؛ invalid JSON → تلاش دوم → در صورت شکست Failed)
-- هر builder پرامپت یک `Temperature` اختصاصی دارد (آزمون 0.3؛ طرح/محتوا 0.7؛ فعالیت/پرامپت‌ها 0.8)؛ بعد از هر بخش، زمینه فشرده‌ای از طرح درس/محتوای همان بسته (`SharedLessonContext`) به پرامپت بخش‌های بعدی تزریق می‌شود؛ کنترل خلوص زبان فارسی (نویسه‌های زبان‌های دیگر / لاتین بیرون از «فارسی (English)») و retry خطاهای گذرای Provider نیز در `SectionGenerationService` است
+- هر builder پرامپت یک `Temperature` اختصاصی دارد (آزمون 0.3؛ طرح/محتوا 0.7؛ فعالیت/پرامپت‌ها 0.8)؛ بعد از هر بخش، زمینه فشرده‌ای از طرح درس/محتوای همان بسته (`SharedLessonContext`) به پرامپت بخش‌های بعدی تزریق می‌شود؛ کنترل خلوص زبان فارسی (نویسه‌های زبان‌های دیگر / لاتین بیرون از «فارسی (English)»؛ اندازه‌های کاغذ مثل A4 مجازند) و retry خطاهای گذرای Provider نیز در `SectionGenerationService` است؛ مصرف توکن واقعی هر فراخوانی از `usage` گیت‌وی خوانده و لاگ می‌شود (`AiResponse.Usage` + خط `Token usage for …`)
 - Regenerate یک بخش، خلاصه‌ی خروجی قبلی را فقط به‌عنوان «مرجع تفاوت» به پرامپت می‌دهد (`RegenerationInfo` + `RegenerationSupport`)، چک تکراریِ سبک دارد (Jaccard ≥0.65 + ≥60٪ خطوط تکراری → یک retry با تأکید تنوع) و وضعیت درس را هنگام رجنیریت به Generating و پس از پایان/شکست به وضعیت درست برمی‌گرداند
 - **RAG: Not implemented**
 

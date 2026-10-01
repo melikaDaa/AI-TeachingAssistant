@@ -175,8 +175,11 @@ public class SectionGenerationService
         CancellationToken ct = default)
     {
         string? lastError = null;
-        var section = typeof(TDomain).Name;
+        var section = SectionName<TDomain>();
         var duplicateRetry = false;
+        var promptTokens = 0;
+        var completionTokens = 0;
+        var totalTokens = 0;
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
             ct.ThrowIfCancellationRequested();
@@ -223,6 +226,13 @@ public class SectionGenerationService
             }
 
             _logger?.LogInformation("AI call succeeded in {DurationMs} ms via {Provider} for {Section} (attempt {Attempt})", sw.ElapsedMilliseconds, _ai.Name, section, attempt);
+            if (response.Usage is not null)
+            {
+                // Phase 2: accumulate real provider-reported usage across attempts.
+                promptTokens += response.Usage.PromptTokens;
+                completionTokens += response.Usage.CompletionTokens;
+                totalTokens += response.Usage.TotalTokens;
+            }
 
             if (string.IsNullOrWhiteSpace(response.Content))
             {
@@ -245,11 +255,16 @@ public class SectionGenerationService
                 continue;
             }
 
+            var comparable = ToComparableText(model);
+
             // Cross-language corruption guard (§13): real runs leaked Chinese/Russian words
             // into Persian text. A hit costs one retry attempt, same as schema validation.
             var languageError = LanguageQualityCheck(model);
             if (languageError is not null)
             {
+                // Phase 2 diagnostics: log WHAT leaked (short snippet only) — repeated guard
+                // rejections are the main hidden token cost, and a generic message can't explain them.
+                _logger?.LogWarning("Language guard rejected {Section} (attempt {Attempt}); offending snippet: {Snippet}", section, attempt, ForeignSnippet(comparable));
                 lastError = languageError;
                 continue;
             }
@@ -258,7 +273,7 @@ public class SectionGenerationService
             // against the previous output — no embeddings. Fires only on heavy overlap, so
             // normal shared vocabulary is never rejected. One bounded retry, then accept:
             // a usable near-duplicate beats an error for the teacher.
-            if (previousText is not null && RegenerationSupport.IsNearDuplicate(ToComparableText(model), previousText))
+            if (previousText is not null && RegenerationSupport.IsNearDuplicate(comparable, previousText))
             {
                 _logger?.LogWarning("Regenerated {Section} was a near-duplicate of the previous output (attempt {Attempt})", section, attempt);
                 if (attempt < MaxAttempts)
@@ -270,9 +285,11 @@ public class SectionGenerationService
                 _logger?.LogInformation("Accepting near-duplicate {Section} on final attempt to avoid failing the request", section);
             }
 
+            LogSectionUsage(section, attempt, promptTokens, completionTokens, totalTokens);
             return Result<TDomain>.Success(model);
         }
 
+        LogSectionUsage(section, MaxAttempts, promptTokens, completionTokens, totalTokens);
         return Result<TDomain>.Failure(lastError ?? "در تولید محتوا مشکلی پیش آمد.");
     }
 
@@ -301,6 +318,50 @@ public class SectionGenerationService
             new[] { v.SceneDescription, v.Characters, v.Environment, v.Camera, v.Motion, v.EducationalObjective, v.VisualStyle }),
         _ => string.Empty,
     };
+
+    /// <summary>Friendly section name for logs (image prompts arrive as a generic List type).</summary>
+    private static string SectionName<TDomain>() =>
+        typeof(TDomain) == typeof(List<ImagePromptModel>) ? nameof(ImagePromptModel) : typeof(TDomain).Name;
+
+    /// <summary>
+    /// Short snippet (±40 chars) around the first offending character, for retry diagnostics.
+    /// Never logs the whole generated text — just enough to understand a guard rejection.
+    /// </summary>
+    private static string ForeignSnippet(string text)
+    {
+        // Mirror the guard: parenthesized glossary and paper sizes are allowed, so they are
+        // never reported as the offending snippet.
+        text = System.Text.RegularExpressions.Regex.Replace(
+            PaperSizePattern.Replace(System.Text.RegularExpressions.Regex.Replace(text, "\\([^)]*\\)", " "), " "),
+            "\\s+", " ");
+        var depth = 0;
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (c == '(') depth++;
+            else if (c == ')') depth = Math.Max(0, depth - 1);
+            else if (depth == 0 && (IsForeignChar(c) || char.IsAsciiLetter(c)))
+            {
+                var start = Math.Max(0, i - 40);
+                var length = Math.Min(80, text.Length - start);
+                return text.Substring(start, length).Replace('\n', ' ');
+            }
+        }
+        return "(English finalPrompt or unlisted field)";
+    }
+
+    /// <summary>
+    /// One lightweight per-section usage line (Phase 2). Sums real provider-reported tokens
+    /// across attempts; silent for providers that report no usage (the offline mock), so no
+    /// fabricated numbers ever appear in logs.
+    /// </summary>
+    private void LogSectionUsage(string section, int attempts, int promptTokens, int completionTokens, int totalTokens)
+    {
+        if (totalTokens <= 0) return;
+        _logger?.LogInformation(
+            "Token usage for {Section}: attempts={Attempts} promptTokens={Prompt} completionTokens={Completion} totalTokens={Total}",
+            section, attempts, promptTokens, completionTokens, totalTokens);
+    }
 
     /// <summary>Appended to the second attempt so the model sees what to fix (Persian-only; stays out of any output).</summary>
     private const string RetryHint = "\n\nتوجه: پاسخ قبلی شما قابل قبول نبود. این یک تلاش دوباره است؛ با دقت بیشتر قواعد بالا را رعایت کن.";
@@ -363,8 +424,16 @@ public class SectionGenerationService
         // Latin is allowed only as a parenthesized glossary term («میتوکندری (Mitochondria)», §13);
         // a stray Latin word inside Persian prose (e.g. "سلول‌های Tiny") fails the check.
         var withoutGlossary = System.Text.RegularExpressions.Regex.Replace(text, "\\([^)]*\\)", string.Empty);
+        // Paper sizes («برگه A4») are standard classroom terms, not leaked prose: without this
+        // whitelist the guard false-positived 10/10 activity attempts in one real session and
+        // burned a retry (≈2,000 tokens) per attempt. Letter+digit tokens only — real word
+        // leaks like "سلول‌های Tiny" still fail.
+        withoutGlossary = PaperSizePattern.Replace(withoutGlossary, string.Empty);
         return withoutGlossary.Any(char.IsAsciiLetter);
     }
+
+    private static readonly System.Text.RegularExpressions.Regex PaperSizePattern =
+        new("\\b[Aa][1-9]\\b", System.Text.RegularExpressions.RegexOptions.Compiled);
 
     /// <summary>Foreign scripts only (no Latin rule) — for intentionally-English fields like finalPrompt.</summary>
     private static bool IsForeignScriptOnly(string? text) =>

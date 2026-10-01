@@ -116,7 +116,22 @@ public class OpenAiCompatibleProvider : IAIProvider
         if (string.IsNullOrWhiteSpace(content))
             throw new AiProviderException("پاسخ سرویس هوش مصنوعی با ساختار مورد انتظار سازگار نبود.");
 
-        return new AiResponse(content);
+        // Token accounting (Phase 2): OpenAI-compatible gateways report per-call usage.
+        // Logged only — never fabricated when the gateway omits the field.
+        var usage = payload?.Usage;
+        if (usage is not null)
+            _logger?.LogInformation(
+                "AI response in {Ms} ms: promptTokens={Prompt} completionTokens={Completion} totalTokens={Total}",
+                (long)(DateTime.UtcNow - startedAt).TotalMilliseconds,
+                usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens);
+        else
+            _logger?.LogInformation(
+                "AI response in {Ms} ms: token usage not reported by provider",
+                (long)(DateTime.UtcNow - startedAt).TotalMilliseconds);
+
+        return new AiResponse(content, usage is null
+            ? null
+            : new AiUsage(usage.PromptTokens ?? 0, usage.CompletionTokens ?? 0, usage.TotalTokens ?? 0));
     }
 
     private sealed record ChatRequest(string Model, ChatMessage[] Messages, double Temperature, int MaxTokens);
@@ -126,11 +141,26 @@ public class OpenAiCompatibleProvider : IAIProvider
     {
         [JsonPropertyName("choices")]
         public List<ChatChoice>? Choices { get; set; }
+
+        [JsonPropertyName("usage")]
+        public ChatUsage? Usage { get; set; }
     }
 
     private sealed class ChatChoice
     {
         [JsonPropertyName("message")]
         public ChatMessage? Message { get; set; }
+    }
+
+    private sealed class ChatUsage
+    {
+        [JsonPropertyName("prompt_tokens")]
+        public int? PromptTokens { get; set; }
+
+        [JsonPropertyName("completion_tokens")]
+        public int? CompletionTokens { get; set; }
+
+        [JsonPropertyName("total_tokens")]
+        public int? TotalTokens { get; set; }
     }
 }
