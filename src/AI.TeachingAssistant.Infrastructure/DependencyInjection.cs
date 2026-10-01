@@ -33,6 +33,8 @@ public static class DependencyInjection
             aiOptions.ApiKey);
         aiOptions.BaseUrl = FirstNonEmpty(Environment.GetEnvironmentVariable("AI_BASE_URL"), aiOptions.BaseUrl);
         aiOptions.Model = FirstNonEmpty(Environment.GetEnvironmentVariable("AI_MODEL"), aiOptions.Model);
+        // Phase 3: optional fallback model (failover OFF unless set).
+        aiOptions.FallbackModel = FirstNonEmpty(Environment.GetEnvironmentVariable("AI_FALLBACK_MODEL"), aiOptions.FallbackModel);
         var provider = FirstNonEmpty(
             Environment.GetEnvironmentVariable("AI_PROVIDER"),
             configuration["AI:Provider"],

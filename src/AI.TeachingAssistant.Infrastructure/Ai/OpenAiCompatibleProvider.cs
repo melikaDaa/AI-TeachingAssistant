@@ -16,6 +16,14 @@ public sealed class OpenAiCompatibleOptions
     public string ApiKey { get; set; } = string.Empty;
     public string BaseUrl { get; set; } = "https://api.xkiro.com/v1";
     public string Model { get; set; } = "qwen/qwen3.5-flash:free";  // vendor/model — must exist in the gateway catalog
+
+    /// <summary>
+    /// Phase 3 controlled failover: used ONLY when the primary model fails with a transient
+    /// availability error (timeout / network / 429 / 5xx). Same request contract, one bounded
+    /// attempt, never for auth/parse/empty failures. Empty (default) = failover disabled.
+    /// </summary>
+    public string FallbackModel { get; set; } = string.Empty;
+
     public int TimeoutSeconds { get; set; } = 110;               // xKiro blocks requests at ~95s; keep headroom above it
     public int MaxTokens { get; set; } = 3000;
 }
@@ -45,16 +53,42 @@ public class OpenAiCompatibleProvider : IAIProvider
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
             throw new AiProviderException("کلید دسترسی سرویس هوش مصنوعی تنظیم نشده است.");
 
+        try
+        {
+            return await CompleteWithModelAsync(_options.Model, request, cancellationToken);
+        }
+        catch (AiProviderException ex) when (ex.IsTransient && CanFallback)
+        {
+            // Phase 3 controlled failover: ONLY for genuine transient availability failures
+            // (timeout / network / 429 / 5xx), ONLY once, with the SAME request contract —
+            // the only difference between primary and fallback attempts is the model.
+            // Auth, missing-key, parse and empty-content failures are deterministic and never fail over.
+            _logger?.LogWarning(
+                "AI failover: primary model {Primary} failed ({Category}); retrying once via fallback model {Fallback}",
+                _options.Model,
+                ex.IsTransient ? "transient" : "other",
+                _options.FallbackModel);
+            return await CompleteWithModelAsync(_options.FallbackModel, request, cancellationToken);
+        }
+    }
+
+    private bool CanFallback =>
+        !string.IsNullOrWhiteSpace(_options.FallbackModel) &&
+        !string.Equals(_options.FallbackModel, _options.Model, StringComparison.Ordinal);
+
+    /// <summary>One bounded chat-completions attempt against a specific model.</summary>
+    private async Task<AiResponse> CompleteWithModelAsync(string model, AiRequest request, CancellationToken cancellationToken)
+    {
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(_options.TimeoutSeconds));
 
         // Diagnostics only: sizes/lengths are logged, never prompt content.
         _logger?.LogInformation(
             "AI request via {Model}: systemChars={System} userChars={User} maxTokens={Max}",
-            _options.Model, request.SystemPrompt.Length, request.UserPrompt.Length, request.MaxTokens);
+            model, request.SystemPrompt.Length, request.UserPrompt.Length, request.MaxTokens);
 
         var body = new ChatRequest(
-            Model: _options.Model,
+            Model: model,
             Messages: new[]
             {
                 new ChatMessage("system", request.SystemPrompt),

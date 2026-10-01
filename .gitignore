@@ -27,3 +27,6 @@ Thumbs.db
 ## Test results
 TestResults/
 *.trx
+
+## Local scratch dumps (verification output, never commit)
+tmp_out/
