@@ -35,6 +35,8 @@ public class AppDbContext : DbContext
             e.Property(x => x.Grade).HasMaxLength(50);
             e.Property(x => x.Topic).HasMaxLength(300);
             e.Property(x => x.StudentLevel).HasMaxLength(50);
+            e.Property(x => x.SessionStyle).HasMaxLength(100);
+            e.Property(x => x.AvailableResources).HasMaxLength(300);
             e.Property(x => x.RequestedSections).HasMaxLength(50);
             e.Property(x => x.LastError).HasMaxLength(500);
             e.HasOne(x => x.Teacher)

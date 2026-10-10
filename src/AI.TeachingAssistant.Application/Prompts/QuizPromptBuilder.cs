@@ -31,6 +31,7 @@ public static class QuizPromptBuilder
         sb.AppendLine("- correctAnswer برای mcq باید دقیقاً با متن یکی از گزینه‌ها یکسان باشد (شامل حرف الف/ب/ج/د).");
         sb.AppendLine("- گزینه‌های انحرافی معقول و هم‌مفهوم با موضوع باشند، نه گزینه‌های آشکارا بی‌ربط.");
         sb.AppendLine("- برای هر سؤال یک explanation کوتاه بنویس که چرا پاسخ درست درست است.");
+        sb.AppendLine("- سطح سؤالها باید با پایه و سطح دانش‌آموزان هماهنگ باشد.");
         return sb.ToString();
     }
 }

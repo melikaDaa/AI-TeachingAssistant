@@ -2,74 +2,102 @@
 @inject MadreseAIApiClient Api
 @inject NavigationManager Nav
 
-<div class="shell">
-    @* ---------- Sidebar (RTL: right side, desktop only) ---------- *@
-    <aside class="sidebar" aria-label="ناوبری اصلی">
-        <NavLink class="sidebar-brand" href="/">
-            <BrandMark Size="38" />
+<div class="shell @(_drawerOpen ? "drawer-open" : "")">
+    <aside class="sidebar" id="app-sidebar" aria-label="ناوبری اصلی">
+        <button type="button" class="drawer-close" @onclick="CloseDrawer" aria-label="بستن منو">
+            <Icon Name="IconName.Close" Size="20" />
+        </button>
+
+        <NavLink class="sidebar-brand" href="/" @onclick="CloseDrawer">
+            <BrandMark Size="40" />
             <span>
                 <span class="brand-name">مدرس‌یار</span>
                 <span class="brand-sub">دستیار هوشمند معلمان</span>
             </span>
         </NavLink>
 
-        <nav class="side-links">
-            <NavLink class="side-link" href="/" Match="NavLinkMatch.All">
-                <Icon Name="IconName.Dashboard" Size="19" /> داشبورد
-            </NavLink>
-            <NavLink class="side-link" href="/lessons/new">
-                <Icon Name="IconName.Plus" Size="19" /> ساخت محتوای جدید
-            </NavLink>
-            <NavLink class="side-link" href="/lessons">
-                <Icon Name="IconName.Lesson" Size="19" /> درس‌های من
-            </NavLink>
-            <NavLink class="side-link" href="/profile">
-                <Icon Name="IconName.Teacher" Size="19" /> پروفایل معلم
-            </NavLink>
-        </nav>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">اصلی</div>
+            <nav class="side-links">
+                <NavLink class="side-link" href="/" Match="NavLinkMatch.All" @onclick="CloseDrawer">
+                    <Icon Name="IconName.Dashboard" Size="18" /> داشبورد
+                </NavLink>
+                <NavLink class="side-link" href="/lessons/new" @onclick="CloseDrawer">
+                    <Icon Name="IconName.Plus" Size="18" /> ساخت محتوای جدید
+                </NavLink>
+                <NavLink class="side-link" href="/lessons" @onclick="CloseDrawer">
+                    <Icon Name="IconName.Lesson" Size="18" /> محتوای من
+                </NavLink>
+            </nav>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">ایجاد</div>
+            <nav class="side-links">
+                <NavLink class="side-link" href="/lessons/new?mode=lesson" @onclick="CloseDrawer">
+                    <Icon Name="IconName.Book" Size="18" /> درس
+                </NavLink>
+                <NavLink class="side-link" href="/lessons/new?mode=activity" @onclick="CloseDrawer">
+                    <Icon Name="IconName.Activity" Size="18" /> فعالیت
+                </NavLink>
+                <NavLink class="side-link" href="/lessons/new?mode=quiz" @onclick="CloseDrawer">
+                    <Icon Name="IconName.Quiz" Size="18" /> آزمون
+                </NavLink>
+            </nav>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">کاوش</div>
+            <nav class="side-links">
+                <span class="side-link" style="cursor:default" aria-disabled="true">
+                    <Icon Name="IconName.Bulb" Size="18" /> ایده‌ها
+                    <span class="side-link-badge">به‌زودی</span>
+                </span>
+                <span class="side-link" style="cursor:default" aria-disabled="true">
+                    <Icon Name="IconName.Book" Size="18" /> کتابخانه
+                    <span class="side-link-badge">به‌زودی</span>
+                </span>
+                <span class="side-link" style="cursor:default" aria-disabled="true">
+                    <Icon Name="IconName.Star" Size="18" /> قابلیت‌های جدید
+                    <span class="side-link-badge">به‌زودی</span>
+                </span>
+            </nav>
+        </div>
 
         <hr class="sidebar-sep" />
 
         <div class="side-links">
+            <NavLink class="side-link" href="/profile" @onclick="CloseDrawer">
+                <Icon Name="IconName.Teacher" Size="18" /> پروفایل معلم
+            </NavLink>
             <span class="side-link" style="cursor:default" aria-disabled="true">
-                <Icon Name="IconName.Settings" Size="19" /> تنظیمات
+                <Icon Name="IconName.Settings" Size="18" /> تنظیمات
             </span>
         </div>
 
         <div class="sidebar-foot">نسخه آزمایشی · v1.0</div>
     </aside>
 
+    <div class="drawer-overlay" @onclick="CloseDrawer" aria-hidden="true"></div>
+
     <div class="main-area">
-        @* ---------- Slim top header ---------- *@
         <header class="top-header">
+            <button type="button" class="header-icon-btn menu-btn" @onclick="ToggleDrawer"
+                    aria-label="باز کردن منو" aria-controls="app-sidebar" aria-expanded="@_drawerOpen">
+                <Icon Name="IconName.Menu" Size="20" />
+            </button>
             <a class="mobile-brand" href="/">
-                <BrandMark Size="30" /> مدرس‌یار
+                <BrandMark Size="28" /> مدرس‌یار
             </a>
             <span class="page-title-sm grow">@_pageTitle</span>
-            <a class="header-icon-btn" href="/lessons/new" title="ساخت محتوای جدید" aria-label="ساخت محتوای جدید">
-                <Icon Name="IconName.Plus" Size="19" />
+            <a class="header-icon-btn header-new-btn" href="/lessons/new" title="ساخت محتوای جدید" aria-label="ساخت محتوای جدید">
+                <Icon Name="IconName.Plus" Size="18" />
             </a>
             <a class="header-teacher" href="/profile" title="پروفایل معلم">
-                <span class="avatar"><Icon Name="IconName.Teacher" Size="16" /></span>
+                <span class="avatar"><Icon Name="IconName.Teacher" Size="15" /></span>
                 @_teacherName
             </a>
         </header>
-
-        @* ---------- Mobile navigation strip (tablet/phone) ---------- *@
-        <nav class="mobile-nav" aria-label="ناوبری موبایل">
-            <NavLink class="side-link" href="/" Match="NavLinkMatch.All">
-                <Icon Name="IconName.Dashboard" Size="18" /> داشبورد
-            </NavLink>
-            <NavLink class="side-link" href="/lessons/new">
-                <Icon Name="IconName.Plus" Size="18" /> ساخت
-            </NavLink>
-            <NavLink class="side-link" href="/lessons">
-                <Icon Name="IconName.Lesson" Size="18" /> درس‌ها
-            </NavLink>
-            <NavLink class="side-link" href="/profile">
-                <Icon Name="IconName.Teacher" Size="18" /> پروفایل
-            </NavLink>
-        </nav>
 
         <main class="page">
             @Body
@@ -82,6 +110,7 @@
 </div>
 
 @code {
+    private bool _drawerOpen;
     private string _pageTitle = "مدرس‌یار";
     private string _teacherName = "معلم عزیز";
 
@@ -92,14 +121,19 @@
     }
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
-        => _pageTitle = ResolveTitle();
+    {
+        _pageTitle = ResolveTitle();
+        _drawerOpen = false;
+    }
 
-    // Contextual page title in the slim header (PART 2). The route's own
-    // <PageTitle> stays for the browser tab; this keeps the header informative.
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private void CloseDrawer() => _drawerOpen = false;
+
     private string ResolveTitle() => Nav.Uri switch
     {
-        var u when u.EndsWith("/lessons/new") => "ساخت محتوای آموزشی",
-        var u when u.EndsWith("/lessons") => "درس‌های من",
+        var u when u.EndsWith("/lessons/new") || u.Contains("/lessons/new?") => "ساخت محتوای آموزشی",
+        var u when u.EndsWith("/lessons") => "محتوای من",
         var u when u.Contains("/lessons/") => "بسته آموزشی درس",
         var u when u.EndsWith("/profile") => "پروفایل معلم",
         _ => "داشبورد",
@@ -115,7 +149,6 @@
         }
         catch
         {
-            // Header stays with the neutral greeting if the profile is not reachable yet.
         }
     }
 }

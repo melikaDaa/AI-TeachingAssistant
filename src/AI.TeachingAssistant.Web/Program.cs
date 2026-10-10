@@ -46,8 +46,27 @@ using (var scope = app.Services.CreateScope())
     await DatabaseInitializer.InitializeAsync(db);
 }
 
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        // The UI ships a single mutable app.css (and other non-fingerprinted assets).
+        // Without explicit cache headers browsers apply heuristic freshness and can keep
+        // a stale stylesheet across UI updates — which silently breaks responsive nav.
+        // Force revalidation (cheap 304s via ETag) so updated CSS always wins.
+        var name = ctx.File.Name;
+        if (name.EndsWith(".css", StringComparison.OrdinalIgnoreCase)
+            || name.EndsWith(".js", StringComparison.OrdinalIgnoreCase)
+            || name.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers.CacheControl = "no-cache, must-revalidate";
+        }
+    }
+});
 app.UseAntiforgery();
+
+// Same Persian error envelope as the standalone Api host (spec §18).
+app.UseMiddleware<AI.TeachingAssistant.Api.Middleware.ErrorHandlingMiddleware>();
 
 app.MapControllers();
 app.MapRazorComponents<App>()

@@ -17,6 +17,8 @@ public class GenerationCoordinator
     private readonly ILessonRepository _lessons;
     private readonly ITeachingPackageRepository _packages;
     private readonly ITeacherRepository _teachers;
+    private readonly IImageProvider _images;
+    private readonly IImageStore _imageStore;
     private readonly ILogger<GenerationCoordinator> _logger;
 
     public GenerationCoordinator(
@@ -24,12 +26,16 @@ public class GenerationCoordinator
         ILessonRepository lessons,
         ITeachingPackageRepository packages,
         ITeacherRepository teachers,
+        IImageProvider images,
+        IImageStore imageStore,
         ILogger<GenerationCoordinator> logger)
     {
         _sections = sections;
         _lessons = lessons;
         _packages = packages;
         _teachers = teachers;
+        _images = images;
+        _imageStore = imageStore;
         _logger = logger;
     }
 
@@ -102,6 +108,7 @@ public class GenerationCoordinator
                 {
                     var r = await _sections.GenerateImagePromptsAsync(ctx, ct);
                     if (!r.Ok) return Result<string?>.Failure(r.Error!);
+                    await RenderImagesAsync(r.Value!, ct);
                     p.MediaPrompts.RemoveAll(m => m.Kind == MediaPromptKind.Image);
                     var i = 1;
                     foreach (var img in r.Value!)
@@ -280,6 +287,38 @@ public class GenerationCoordinator
         return result.Ok
             ? Result<bool>.Success(true)
             : Result<bool>.Failure(result.Error!);
+    }
+
+    /// <summary>
+    /// Best-effort image rendering for the generated prompts. Runs only when an image provider
+    /// is configured. A per-image failure is logged and skipped so the section (whose prompts
+    /// are still valuable and copyable) never fails because a picture could not be drawn.
+    /// </summary>
+    private async Task RenderImagesAsync(List<ImagePromptModel> prompts, CancellationToken ct)
+    {
+        if (!_images.IsEnabled) return;
+
+        var limit = Math.Min(prompts.Count, _images.MaxImagesPerSection);
+        for (var i = 0; i < limit; i++)
+        {
+            var prompt = prompts[i];
+            if (string.IsNullOrWhiteSpace(prompt.FinalPrompt)) continue;
+
+            try
+            {
+                var image = await _images.GenerateAsync(new ImageGenerationRequest(prompt.FinalPrompt), ct);
+                prompt.ImageUrl = await _imageStore.SaveAsync(image.Data, image.ContentType, ct);
+                prompt.ImageGeneratedAt = DateTime.UtcNow;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Image rendering failed for prompt {Index}", i + 1);
+            }
+        }
     }
 
     private async Task<TeachingPackage> CreatePackageAsync(Lesson lesson, CancellationToken ct)

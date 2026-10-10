@@ -60,6 +60,12 @@ public static class PromptContextBuilder
         sb.AppendLine($"- موضوع: {l.Topic}");
         sb.AppendLine($"- مدت کلاس: {l.DurationMinutes} دقیقه");
         sb.AppendLine($"- سطح دانش‌آموزان: {l.StudentLevel}");
+        if (l.StudentCount.HasValue)
+            sb.AppendLine($"- تعداد دانش‌آموزان: {l.StudentCount.Value}");
+        if (!string.IsNullOrWhiteSpace(l.SessionStyle))
+            sb.AppendLine($"- سبک جلسه: {l.SessionStyle}");
+        if (!string.IsNullOrWhiteSpace(l.AvailableResources))
+            sb.AppendLine($"- امکانات موجود در کلاس: {l.AvailableResources}");
         if (!string.IsNullOrWhiteSpace(l.AdditionalInstructions))
             sb.AppendLine($"- توضیحات تکمیلی معلم: {l.AdditionalInstructions}");
         sb.AppendLine();

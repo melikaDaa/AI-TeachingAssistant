@@ -1,0 +1,161 @@
+@* ---------- Classroom Mode: step-through lesson execution ---------- *@
+
+<div class="classroom-mode">
+    <div class="classroom-header">
+        <div class="classroom-progress">
+            <span class="classroom-step">مرحله @(_currentStep + 1).ToPersianDigits() از @_steps.Count.ToPersianDigits()</span>
+            <div class="classroom-progress-bar">
+                <div class="classroom-progress-fill" style="width: @((_currentStep + 1) * 100 / _steps.Count)%"></div>
+            </div>
+        </div>
+        <button type="button" class="btn ghost small" @onclick="ExitClassroomMode">
+            <Icon Name="IconName.ArrowRight" Size="15" /> خروج از حالت کلاس
+        </button>
+    </div>
+
+    @if (_currentStep < _steps.Count)
+    {
+        var step = _steps[_currentStep];
+        <div class="classroom-step-card">
+            <div class="classroom-step-header">
+                <span class="classroom-step-icon"><Icon Name="@step.Icon" Size="20" /></span>
+                <div>
+                    <h3>@step.Title</h3>
+                    <span class="classroom-step-time"><Icon Name="IconName.Time" Size="14" /> @step.DurationMinutes.ToPersianDigits() دقیقه</span>
+                </div>
+            </div>
+
+            <div class="classroom-step-body">
+                @if (!string.IsNullOrWhiteSpace(step.Objective))
+                {
+                    <div class="classroom-step-section">
+                        <b>هدف:</b>
+                        <p>@step.Objective</p>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(step.Activity))
+                {
+                    <div class="classroom-step-section">
+                        <b>فعالیت:</b>
+                        <p>@step.Activity</p>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(step.TeacherNote))
+                {
+                    <div class="classroom-step-section classroom-step-note">
+                        <b>نکته اجرا:</b>
+                        <p>@step.TeacherNote</p>
+                    </div>
+                }
+            </div>
+
+            <div class="classroom-step-actions">
+                <button type="button" class="btn ghost" disabled="@(_currentStep == 0)" @onclick="PreviousStep">
+                    <Icon Name="IconName.ArrowRight" Size="16" /> قبلی
+                </button>
+                <span class="spacer"></span>
+                @if (_currentStep < _steps.Count - 1)
+                {
+                    <button type="button" class="btn" @onclick="NextStep">
+                        بعدی <Icon Name="IconName.ArrowLeft" Size="16" />
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn ai" @onclick="ExitClassroomMode">
+                        <Icon Name="IconName.Check" Size="16" /> پایان جلسه
+                    </button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TeachingPackageDto Package { get; set; } = null!;
+    [Parameter] public EventCallback OnExit { get; set; }
+
+    private int _currentStep;
+    private List<ClassroomStep> _steps = new();
+
+    protected override void OnInitialized()
+    {
+        BuildSteps();
+    }
+
+    private void BuildSteps()
+    {
+        _steps.Clear();
+
+        if (Package.LessonPlan is not null)
+        {
+            foreach (var segment in Package.LessonPlan.Segments)
+            {
+                _steps.Add(new ClassroomStep
+                {
+                    Icon = IconName.Lesson,
+                    Title = segment.Title,
+                    DurationMinutes = segment.EndMinute - segment.StartMinute,
+                    Objective = segment.Description,
+                    Activity = segment.Description,
+                    TeacherNote = segment.Description
+                });
+            }
+        }
+
+        if (Package.Activity is not null)
+        {
+            _steps.Add(new ClassroomStep
+            {
+                Icon = IconName.Activity,
+                Title = Package.Activity.Title,
+                DurationMinutes = Package.Activity.DurationMinutes,
+                Objective = Package.Activity.Objective,
+                Activity = string.Join("\n", Package.Activity.Instructions),
+                TeacherNote = Package.Activity.ExpectedResult
+            });
+        }
+
+        if (Package.Quiz is not null)
+        {
+            _steps.Add(new ClassroomStep
+            {
+                Icon = IconName.Quiz,
+                Title = "ارزشیابی",
+                DurationMinutes = 10,
+                Objective = "سنجش یادگیری دانش‌آموزان",
+                Activity = "اجرای آزمون",
+                TeacherNote = "پاسخ‌نامه را در نظر بگیرید"
+            });
+        }
+    }
+
+    private void NextStep()
+    {
+        if (_currentStep < _steps.Count - 1)
+            _currentStep++;
+    }
+
+    private void PreviousStep()
+    {
+        if (_currentStep > 0)
+            _currentStep--;
+    }
+
+    private async Task ExitClassroomMode()
+    {
+        await OnExit.InvokeAsync();
+    }
+
+    private sealed class ClassroomStep
+    {
+        public IconName Icon { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public int DurationMinutes { get; set; }
+        public string? Objective { get; set; }
+        public string? Activity { get; set; }
+        public string? TeacherNote { get; set; }
+    }
+}

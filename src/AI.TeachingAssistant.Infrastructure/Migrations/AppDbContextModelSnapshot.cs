@@ -108,6 +108,17 @@ namespace AI.TeachingAssistant.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("StudentCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SessionStyle")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AvailableResources")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Subject")
                         .IsRequired()
                         .HasMaxLength(100)

@@ -7,7 +7,7 @@
     <title>مدرس‌یار — دستیار هوشمند معلم</title>
     <base href="/" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="app.css?v=2" />
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
     <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: false)" />
 </head>
@@ -16,7 +16,6 @@
     <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     <script src="_framework/blazor.web.js"></script>
     <script>
-        // Copy-to-clipboard with a fallback for non-secure contexts.
         window.copyToClipboard = async function (text) {
             try {
                 await navigator.clipboard.writeText(text);
@@ -33,6 +32,14 @@
                 return ok;
             }
         };
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            var shell = document.querySelector('.shell.drawer-open');
+            if (!shell) return;
+            var closeBtn = shell.querySelector('.drawer-close');
+            if (closeBtn) closeBtn.click();
+        });
     </script>
 </body>
 

@@ -15,13 +15,29 @@
 
 @if (_step == 1)
 {
-    @* ---------- Step 1: lesson information (PART 8) ---------- *@
     <div class="page-head">
         <div class="grow">
             <h1><Icon Name="IconName.AI" Size="26" CssClass="icon-title" /> با کمک مدرس‌یار یک درس می‌سازیم</h1>
             <p class="page-sub">چند اطلاعات کوتاه درباره کلاس وارد کنید؛ مدرس‌یار همان‌طور که می‌شناسد، محتوای متناسب می‌سازد.</p>
         </div>
     </div>
+
+    <div class="ai-suggestion">
+        <span class="ai-avatar"><Icon Name="IconName.Sparkle" Size="18" /></span>
+        <div class="ai-text">
+            <b>سلام! من مدرس‌یار هستم</b>
+            <p>برای شروع، کمی درباره کلاس و درس خود به من بگویید. هرچه اطلاعات دقیق‌تری بدهید، محتوای بهتری می‌سازم.</p>
+        </div>
+    </div>
+
+    @if (ModeTitle is not null)
+    {
+        <div class="mode-note" role="status">
+            <Icon Name="@SectionMeta.IconOf(ModeSection)" Size="17" />
+            <span>حالت انتخابی: <b>@ModeTitle</b> — پس از تکمیل اطلاعات، همین بخش به‌صورت پیش‌فرض انتخاب می‌شود. می‌توانید در مرحله بعد آن را تغییر دهید.</span>
+            <a class="mode-note-link" href="/lessons/new?mode=lesson">جلسه کامل</a>
+        </div>
+    }
 
     @if (_error is not null)
     {
@@ -31,8 +47,8 @@
     }
 
     <div class="card">
-        <h2 style="font-size:1.15rem">اطلاعات درس</h2>
-        <p class="page-sub" style="margin-bottom:1rem">این مشخصات دقیقاً همان چیزی است که هوش مصنوعی برای ساخت محتوا استفاده می‌کند.</p>
+        <h2 style="font-size:var(--text-lg)">اطلاعات درس</h2>
+        <p class="page-sub" style="margin-bottom:1.2rem">این مشخصات دقیقاً همان چیزی است که هوش مصنوعی برای ساخت محتوا استفاده می‌کند.</p>
 
         <div class="form-row">
             <div class="field">
@@ -58,7 +74,7 @@
 
         <div class="form-row">
             <div class="field">
-                <label for="duration">مدت کلاس (دقیقه) *</label>
+                <label for="duration">مدت جلسه (دقیقه) *</label>
                 <input id="duration" type="number" min="15" max="240" step="5" @bind-value="_duration" @bind-value:event="oninput" />
             </div>
             <div class="field">
@@ -71,12 +87,37 @@
             </div>
         </div>
 
-        @* Teaching preferences (PART 8) — existing fields only *@
-        <h2 style="font-size:1.15rem; margin-top:1.4rem">تنظیمات تدریس</h2>
+        <details class="advanced-options">
+            <summary><Icon Name="IconName.Settings" Size="16" /> گزینه‌های پیشرفته (اختیاری)</summary>
+            <div class="advanced-options-body">
+                <div class="form-row">
+                    <div class="field">
+                        <label for="studentCount">تعداد دانش‌آموزان</label>
+                        <input id="studentCount" type="number" min="1" max="60" @bind-value="_studentCount" @bind-value:event="oninput" />
+                    </div>
+                    <div class="field">
+                        <label for="sessionStyle">سبک جلسه</label>
+                        <select id="sessionStyle" @bind="_sessionStyle">
+                            <option value="">انتخاب کنید...</option>
+                            <option value="مشارکتی">مشارکتی</option>
+                            <option value="توضیح‌محور">توضیح‌محور</option>
+                            <option value="بازی‌محور">بازی‌محور</option>
+                            <option value="ترکیبی">ترکیبی</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="resources">امکانات موجود در کلاس</label>
+                    <input id="resources" type="text" @bind-value="_resources" @bind-value:event="oninput" placeholder="مثلاً: تخته، ویدئوپروژکتور، کار گروهی" />
+                </div>
+            </div>
+        </details>
+
+        <h2 style="font-size:var(--text-lg); margin-top:1.5rem">یادداشت معلم</h2>
         <div class="field">
-            <label for="instructions">توضیحات تکمیلی معلم (اختیاری)</label>
+            <label for="instructions">توضیحات / محدودیت‌ها (اختیاری)</label>
             <textarea id="instructions" @bind-value="_instructions" @bind-value:event="oninput"
-                      placeholder="مثلاً: درس را تعاملی و مناسب گفت‌وگوی کلاسی طراحی کن."></textarea>
+                      placeholder="مثلاً: دانش‌آموزان در این مبحث معمولاً حوصله ندارند."></textarea>
             <div class="hint">هر نکته‌ای که دوست دارید مدرس‌یار در ساخت همه بخش‌ها رعایت کند.</div>
         </div>
 
@@ -88,7 +129,6 @@
 
 @if (_step == 2)
 {
-    @* ---------- Step 2: what should I prepare? ---------- *@
     <div class="page-head">
         <div class="grow">
             <h1>چه چیزی برای کلاس شما آماده کنم؟</h1>
@@ -96,7 +136,6 @@
         </div>
     </div>
 
-    @* ---------- Lesson summary (PART 8): what the AI understood ---------- *@
     <div class="chip-row" style="margin-top:0">
         <span class="chip"><Icon Name="IconName.Content" Size="14" /> @(_subject.Length > 0 ? _subject : "نام درس")</span>
         <span class="chip"><Icon Name="IconName.Teacher" Size="14" /> @(_grade.Length > 0 ? $"پایه {_grade}" : "پایه")</span>
@@ -136,10 +175,10 @@
         }
     </div>
 
-    <div class="section-toolbar" style="margin-top:1.2rem">
+    <div class="section-toolbar" style="margin-top:1.4rem">
         <button type="button" class="btn ghost big" @onclick="() => _step = 1">بازگشت</button>
         <span class="spacer"></span>
-        <button type="button" class="btn big" disabled="@(!_selected.Any() || _generating)" @onclick="Generate">
+        <button type="button" class="btn big ai" disabled="@(!_selected.Any() || _generating)" @onclick="Generate">
             @if (_generating)
             {
                 <Icon Name="IconName.Loader" Size="18" CssClass="spin" />
@@ -147,7 +186,7 @@
             }
             else
             {
-                <Icon Name="IconName.AI" Size="18" />
+                <Icon Name="IconName.Sparkle" Size="18" />
                 <text>ساخت محتوای آموزشی</text>
             }
         </button>
@@ -155,6 +194,9 @@
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "mode")]
+    public string? Mode { get; set; }
+
     private int _step = 1;
     private bool _generating;
 
@@ -164,6 +206,9 @@
     private string _topic = string.Empty;
     private int _duration = 60;
     private string _level = "متوسط";
+    private int? _studentCount;
+    private string? _sessionStyle;
+    private string? _resources;
     private string _instructions = string.Empty;
 
     private HashSet<int> _selected = new() { 1, 2, 3, 4, 5, 6 };
@@ -172,9 +217,41 @@
 
     private bool IsFullPackage => _selected.Count == SectionMeta.All.Count;
 
+    private int ModeSection => _mode switch
+    {
+        "content" => 2,
+        "activity" => 3,
+        "quiz" => 4,
+        "image-prompt" => 5,
+        "video-prompt" => 6,
+        _ => 1,
+    };
+
+    private string? ModeTitle => _mode switch
+    {
+        "activity" => "ساخت فعالیت کلاسی",
+        "quiz" => "ساخت آزمون",
+        "content" => "ساخت محتوای آموزشی",
+        "image-prompt" => "ساخت پرامپت تصویر",
+        "video-prompt" => "ساخت پرامپت ویدئو",
+        _ => null,
+    };
+
+    private string _mode = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
-        // Prefill from the teacher profile to minimize typing (existing behavior).
+        _mode = (Mode ?? string.Empty).Trim().ToLowerInvariant();
+        _selected = _mode switch
+        {
+            "content" => new HashSet<int> { 2 },
+            "activity" => new HashSet<int> { 3 },
+            "quiz" => new HashSet<int> { 4 },
+            "image-prompt" => new HashSet<int> { 5 },
+            "video-prompt" => new HashSet<int> { 6 },
+            _ => new HashSet<int> { 1, 2, 3, 4, 5, 6 },
+        };
+
         var teacher = await Api.GetTeacherAsync();
         if (teacher is not null)
         {
@@ -186,8 +263,6 @@
         }
     }
 
-    // UI-side validation so the teacher gets an immediate Persian message
-    // before any request is sent; the backend repeats the same rules.
     private void GoStep2()
     {
         _error =
@@ -248,13 +323,15 @@
                 Topic = _topic,
                 DurationMinutes = _duration,
                 StudentLevel = _level,
+                StudentCount = _studentCount,
+                SessionStyle = string.IsNullOrWhiteSpace(_sessionStyle) ? null : _sessionStyle,
+                AvailableResources = string.IsNullOrWhiteSpace(_resources) ? null : _resources,
                 AdditionalInstructions = string.IsNullOrWhiteSpace(_instructions) ? null : _instructions,
                 RequestedSections = _selected.OrderBy(x => x).ToList(),
             });
 
             await Api.StartGenerationAsync(created!.Id);
 
-            // The package page is addressable; it polls until generation completes.
             Nav.NavigateTo($"/lessons/{created.Id}");
         }
         catch (MadreseAIApiException ex)

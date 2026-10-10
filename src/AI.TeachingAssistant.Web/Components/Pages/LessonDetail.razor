@@ -14,13 +14,12 @@ else if (_package is null)
 }
 else if (_package.Progress.Status == "ready")
 {
-    @* ---------- Ready: structured educational workspace header (PART 11) ---------- *@
     <div class="page-head">
         <div class="grow">
             <h1>@_package.LessonTitle</h1>
             <p class="page-sub">محتوای آماده‌ی کلاس — مدرس‌یار ساخته، شما بازبینی و ویرایش می‌کنید.</p>
         </div>
-        <a class="btn ghost" href="/lessons">درس‌های من <Icon Name="IconName.ArrowRight" Size="16" /></a>
+        <a class="btn ghost" href="/lessons">محتوای من <Icon Name="IconName.ArrowRight" Size="16" /></a>
     </div>
 
     @if (_summary is not null)
@@ -37,13 +36,12 @@ else if (_package.Progress.Status == "ready")
 }
 else
 {
-    @* ---------- Generating / failed: keep the polling view ---------- *@
     <div class="page-head">
         <div class="grow">
             <h1>@_package.LessonTitle</h1>
             <p class="page-sub">بسته آموزشی درس</p>
         </div>
-        <a class="btn ghost" href="/lessons">درس‌های من <Icon Name="IconName.ArrowRight" Size="16" /></a>
+        <a class="btn ghost" href="/lessons">محتوای من <Icon Name="IconName.ArrowRight" Size="16" /></a>
     </div>
 
     <TeachingPackageView @ref="_view" Package="_package" OnCompleted="ReloadPackageAsync" />
@@ -68,7 +66,6 @@ else
             }
             else if (_package.Progress.Status == "ready")
             {
-                // Summary chips come from the existing lessons list API (UI-only).
                 var lessons = await Api.GetLessonsAsync();
                 var match = lessons?.FirstOrDefault(l => l.Id == Id);
                 if (match is not null)
@@ -85,10 +82,6 @@ else
 
     protected override Task OnAfterRenderAsync(bool _)
     {
-        // Start polling on the render that actually carries data. The first render happens
-        // while _package is still null (the fetch is in flight), so gating on firstRender
-        // alone would never start the timer. StartPolling is idempotent.
-        // "draft" covers the brief window between lesson creation and the generation job.
         if (_package is not null && _package.Progress.Status is "generating" or "draft")
         {
             _view?.StartPolling();
@@ -97,8 +90,6 @@ else
         return Task.CompletedTask;
     }
 
-    // Called by TeachingPackageView when generation finishes, so the page header
-    // switches to the ready state (and summary chips load) without a manual reload.
     private async Task ReloadPackageAsync()
     {
         var fresh = await Api.GetLessonAsync(Id);

@@ -35,6 +35,9 @@ public static class ActivityPromptBuilder
         sb.AppendLine("- durationMinutes نباید از مدت کلاس بیشتر باشد و با جریان کلاس هم‌خوان باشد.");
         sb.AppendLine("- instructions بین ۴ تا ۷ گام روشن و قابل اجرا در کلاس واقعی.");
         sb.AppendLine("- materials ساده و در دسترس (کاغذ، مقوا، ماژیک و ...).");
+        sb.AppendLine("- اگر تعداد دانش‌آموزان مشخص شده، اندازه گروه‌ها را با آن تنظیم کن.");
+        sb.AppendLine("- اگر سبک جلسه مشخص شده، نوع فعالیت را با آن هماهنگ کن (مشارکتی، توضیح‌محور، بازی‌محور، ترکیبی).");
+        sb.AppendLine("- اگر امکانات کلاس مشخص شده، فقط از آن امکانات استفاده کن.");
         return sb.ToString();
     }
 }

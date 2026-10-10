@@ -34,6 +34,9 @@ public sealed class CreateLessonRequest
     public string Topic { get; set; } = string.Empty;
     public int DurationMinutes { get; set; } = 60;
     public string StudentLevel { get; set; } = string.Empty;
+    public int? StudentCount { get; set; }
+    public string? SessionStyle { get; set; }
+    public string? AvailableResources { get; set; }
     public string? AdditionalInstructions { get; set; }
 
     /// <summary>Numeric ContentTypes codes; empty/absent means the full package.</summary>
@@ -48,6 +51,9 @@ public sealed class UpdateLessonRequest
     public string Topic { get; set; } = string.Empty;
     public int DurationMinutes { get; set; } = 60;
     public string StudentLevel { get; set; } = string.Empty;
+    public int? StudentCount { get; set; }
+    public string? SessionStyle { get; set; }
+    public string? AvailableResources { get; set; }
     public string? AdditionalInstructions { get; set; }
 }
 
@@ -90,7 +96,8 @@ public sealed record ImagePromptDto(
     string Composition,
     string EducationalPurpose,
     string TextRestrictions,
-    string FinalPrompt);
+    string FinalPrompt,
+    string? ImageUrl);
 
 public sealed record VideoPromptDto(
     int Id,

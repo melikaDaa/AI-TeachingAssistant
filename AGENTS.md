@@ -24,7 +24,7 @@ MVP — فعال و قابل دمو. جریان کامل «ساخت درس → �
   - `src/AI.TeachingAssistant.Web` — Blazor Server ( SSR + Interactive Server )
 - **Blazor Server** برای UI (فایل `App.razor` حالت `InteractiveServerRenderMode(prerender: false)` را ثبت می‌کند)
 - **EF Core 9 + SQLite** (`madreseai.db`)
-- **xUnit** برای تست (`src/AI.TeachingAssistant.Tests` — ۳۰ تست)
+- **xUnit** برای تست (`src/AI.TeachingAssistant.Tests` — ۶۰ تست)
 - فونت **Vazirmatn** از CDN؛ **بدون** کتابخانه UI ثالث (CSS سفارشی در `src/AI.TeachingAssistant.Web/wwwroot/app.css`)
 
 ## Current Architecture
@@ -89,8 +89,8 @@ OpenAiCompatibleProvider  →  xKiro (https://api.xkiro.com/v1)
 
 ## UI/UX Rules
 
-- سبک «Calm AI Education»: پالت آبی (`#2196F3` / `#0D47A1` / `#E3F2FD` / `#90CAF9`)، فضای سفید زیاد، بدون گرادیان سنگین و انیمیشن اضافه
-- CTA اصلی فقط `#2196F3`؛ قرمز فقط برای حذف (با تأیید `confirm`)
+- سبک «AI-First Educational Assistant»: پالت آبی (`#2B4BD8` / `#1E3A9E` / `#EEF2FF`) + بنفش AI (`#7C3AED` / `#F5F0FF`)، فضای سفید زیاد، بدون گرادیان سنگین و انیمیشن اضافه
+- CTA اصلی فقط `#2B4BD8`؛ قرمز فقط برای حذف (با تأیید `confirm`)
 - هر صفحه «اقدام بعدی واضح» دارد؛ حالت‌های لودینگ/خالی/خطا پیام فارسی دستیارمانند دارند
 - جزئیات: `docs/design-system.md`
 
@@ -116,20 +116,20 @@ OpenAiCompatibleProvider  →  xKiro (https://api.xkiro.com/v1)
 
 - قبل از تغییر، کد موجود را بخوان؛ ساختار موجود را دوباره نساز
 - Current را با Future قاطی نکن؛ چیزهای پیاده‌نشده را پیاده‌شده گزارش نکن
-- بعد از هر تغییر: `dotnet build` + `dotnet test` (۳۰ تست باید سبز شود)
+- بعد از هر تغییر: `dotnet build` + `dotnet test` (۶۰ تست باید سبز شود)
 - فلو دمو کامل باید همیشه سالم بماند: Home → ساخت محتوای جدید → فرم → انتخاب محتوا → Generate → مشاهده بسته → ویرایش/کپی/تولید مجدد → درس‌های من → بازگشایی
 
 ## Audit Snapshot
 
 ```text
-Audit date: 2026-09-27
-Current branch: main (آخرین کامیت: 63d52f4 «مدرس‌یار MVP: دستیار هوشمند معلم با UI بازطراحی‌شده»)
+Audit date: 2026-10-08
+Current branch: main
 Frontend: Blazor Server (.NET 9)، RTL فارسی، CSS سفارشی، بدون کتابخانه UI
 Backend: ASP.NET Core Controllers + Application Services + Background worker
 Database: SQLite via EF Core 9 (1 migration: InitialCreate + seed)
 AI: IAIProvider → MockAIProvider (پیش‌فرض) / OpenAiCompatibleProvider → xKiro (فعال با AI_PROVIDER=xkiro + کلید از env)
 Authentication: Not implemented
 RAG: Not implemented
-Testing: xUnit — ۳۰ تست (همه سبز؛ شامل workflow E2E روی SQLite in-memory)
+Testing: xUnit — ۶۰ تست (همه سبز؛ شامل workflow E2E روی SQLite in-memory)
 Overall MVP status: کامل و قابل دمو با Mock AI
 ```

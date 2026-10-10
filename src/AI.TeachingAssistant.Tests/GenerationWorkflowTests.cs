@@ -32,6 +32,8 @@ public sealed class GenerationWorkflowTests : IDisposable
         var services = new ServiceCollection();
         services.AddDbContext<AppDbContext>(o => o.UseSqlite(_connection));
         services.AddSingleton<IAIProvider, MockAIProvider>();
+        services.AddSingleton<IImageProvider, DisabledImageProvider>();
+        services.AddSingleton<IImageStore>(new InMemoryImageStore());
         services.AddScoped<SectionGenerationService>();
         services.AddScoped<LessonService>();
         services.AddScoped<PackageSectionService>();

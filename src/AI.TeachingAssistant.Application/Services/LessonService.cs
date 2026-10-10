@@ -35,6 +35,9 @@ public class LessonService
             Topic = request.Topic.Trim(),
             DurationMinutes = request.DurationMinutes,
             StudentLevel = request.StudentLevel.Trim(),
+            StudentCount = request.StudentCount,
+            SessionStyle = request.SessionStyle?.Trim(),
+            AvailableResources = request.AvailableResources?.Trim(),
             AdditionalInstructions = request.AdditionalInstructions?.Trim(),
             RequestedSections = NormalizeSections(request.RequestedSections),
             PackageStatus = PackageStatus.Draft,
@@ -64,6 +67,9 @@ public class LessonService
         lesson.Topic = request.Topic.Trim();
         lesson.DurationMinutes = request.DurationMinutes;
         lesson.StudentLevel = request.StudentLevel.Trim();
+        lesson.StudentCount = request.StudentCount;
+        lesson.SessionStyle = request.SessionStyle?.Trim();
+        lesson.AvailableResources = request.AvailableResources?.Trim();
         lesson.AdditionalInstructions = request.AdditionalInstructions?.Trim();
 
         await _lessons.UpdateAsync(lesson, ct);

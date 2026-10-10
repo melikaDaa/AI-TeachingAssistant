@@ -27,4 +27,12 @@ public enum IconName
     Home,
     Trash,
     Loader,
+    Sparkle,
+    Send,
+    Book,
+    Star,
+    Refresh,
+    Play,
+    Menu,
+    Close,
 }

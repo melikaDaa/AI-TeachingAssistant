@@ -10,4 +10,10 @@ public sealed class ImagePromptModel
     public string EducationalPurpose { get; set; } = string.Empty;
     public string TextRestrictions { get; set; } = string.Empty;
     public string FinalPrompt { get; set; } = string.Empty;
+
+    /// <summary>App-relative URL of the rendered image, or null when only the prompt exists.</summary>
+    public string? ImageUrl { get; set; }
+
+    /// <summary>UTC timestamp of when the image was rendered, or null when only the prompt exists.</summary>
+    public DateTime? ImageGeneratedAt { get; set; }
 }

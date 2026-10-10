@@ -2,11 +2,11 @@
 @inject MadreseAIApiClient Api
 @inject IJSRuntime JS
 
-<PageTitle>مدرس‌یار — درس‌های من</PageTitle>
+<PageTitle>مدرس‌یار — محتوای من</PageTitle>
 
 <div class="page-head">
     <div class="grow">
-        <h1>درس‌های من</h1>
+        <h1>محتوای من</h1>
         <p class="page-sub">آرشیو کلاس‌هایی که با کمک مدرس‌یار آماده کرده‌اید.</p>
     </div>
     <a class="btn" href="/lessons/new"><Icon Name="IconName.Plus" Size="17" /> ساخت محتوای جدید</a>
@@ -24,9 +24,9 @@
 else if (_lessons.Count == 0)
 {
     <div class="empty">
-        <span class="big"><BrandMark Size="52" /></span>
-        <h2>هنوز درسی نساخته‌اید</h2>
-        <p>با کمک مدرس‌یار اولین محتوای آموزشی خود را در چند دقیقه آماده کنید.</p>
+        <span class="big"><img src="assets/madrese-assistant.png" alt="" style="width:80px;height:80px" /></span>
+        <h2>هنوز محتوایی نساخته‌اید</h2>
+        <p>اولین محتوای آموزشی‌ات را با کمک من بساز.</p>
         <a class="btn" href="/lessons/new"><Icon Name="IconName.Plus" Size="17" /> ساخت اولین محتوا</a>
     </div>
 }
@@ -36,7 +36,11 @@ else
         @foreach (var lesson in _lessons)
         {
             <div class="lesson-row">
-                <span class="card-icon" aria-hidden="true"><Icon Name="IconName.Lesson" Size="19" /></span>
+                <span class="card-icon" aria-hidden="true">
+                    <span style="width:2.2rem; height:2.2rem; display:inline-flex; align-items:center; justify-content:center; background:var(--primary-50); color:var(--primary); border-radius:var(--radius-sm)">
+                        <Icon Name="IconName.Lesson" Size="19" />
+                    </span>
+                </span>
                 <div class="grow">
                     <h3>@lesson.Title</h3>
                     <div class="meta">
@@ -79,7 +83,6 @@ else
         }
     }
 
-    // Confirmation before destructive delete (spec §23).
     private async Task ConfirmDeleteAsync(int id)
     {
         if (!await JS.InvokeAsync<bool>("confirm", "آیا مطمئن هستید که می‌خواهید این درس را حذف کنید؟"))

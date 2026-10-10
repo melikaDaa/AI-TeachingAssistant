@@ -30,3 +30,6 @@ TestResults/
 
 ## Local scratch dumps (verification output, never commit)
 tmp_out/
+
+## Local tool state
+.freebuff/

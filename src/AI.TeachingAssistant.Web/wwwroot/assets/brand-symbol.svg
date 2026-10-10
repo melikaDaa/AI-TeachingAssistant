@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>مدرس‌یار</title>
+  <defs>
+    <linearGradient id="brandGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2B4BD8"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="16" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="16" fill="url(#brandGrad)"/>
+
+  <path d="M20 22C16 18.5 11 17.5 6 18v22c5-.5 10 .5 14 4V22z" fill="#fff" opacity=".92"/>
+  <path d="M44 22c4-3.5 9-4.5 14-4v22c-5-.5-10 .5-14 4V22z" fill="#fff" opacity=".75"/>
+
+  <path d="M32 6l2.2 7.2L41 15l-6.8 1.8L32 24l-2.2-7.2L23 15l6.8-1.8L32 6z" fill="url(#sparkGrad)"/>
+
+  <rect x="10" y="50" width="44" height="3" rx="1.5" fill="#fff" opacity=".3"/>
+</svg>

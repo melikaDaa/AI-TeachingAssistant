@@ -63,7 +63,7 @@ public static class DtoMapper
             {
                 var m = mp.ImageModel;
                 images.Add(new ImagePromptDto(mp.Id, mp.Title, m.Subject, m.VisualElements, m.Style,
-                    m.Composition, m.EducationalPurpose, m.TextRestrictions, m.FinalPrompt));
+                    m.Composition, m.EducationalPurpose, m.TextRestrictions, m.FinalPrompt, m.ImageUrl));
             }
             else if (mp.Kind == MediaPromptKind.Video && mp.VideoModel is not null)
             {

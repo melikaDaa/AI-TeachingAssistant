@@ -14,6 +14,9 @@ public class Lesson : BaseEntity
     public string Topic { get; set; } = string.Empty;
     public int DurationMinutes { get; set; }
     public string StudentLevel { get; set; } = string.Empty;
+    public int? StudentCount { get; set; }
+    public string? SessionStyle { get; set; }
+    public string? AvailableResources { get; set; }
     public string? AdditionalInstructions { get; set; }
 
     public PackageStatus PackageStatus { get; set; } = PackageStatus.Draft;

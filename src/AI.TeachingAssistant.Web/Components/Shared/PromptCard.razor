@@ -13,6 +13,14 @@
         <div class="edited-note"><Icon Name="IconName.Check" Size="14" /> کپی شد</div>
     }
 
+    @if (Image?.ImageUrl is not null)
+    {
+        <figure class="prompt-figure">
+            <img class="prompt-image" src="@Image.ImageUrl" alt="تصویر تولیدشده برای @Image.Subject" loading="lazy" />
+            <figcaption class="prompt-figure-cap"><Icon Name="IconName.Sparkle" Size="13" /> تصویر تولیدشده با هوش مصنوعی</figcaption>
+        </figure>
+    }
+
     @if (Image is not null)
     {
         <dl class="prompt-attrs">
@@ -54,7 +62,6 @@
     private string FinalPrompt =>
         Image?.FinalPrompt ?? Video?.FinalPrompt ?? string.Empty;
 
-    // Per-prompt copy button (spec §13/§14): copies the final English prompt.
     private async Task CopyPrompt()
     {
         if (string.IsNullOrWhiteSpace(FinalPrompt)) return;
