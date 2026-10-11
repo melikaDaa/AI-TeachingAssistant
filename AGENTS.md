@@ -24,7 +24,7 @@ MVP — فعال و قابل دمو. جریان کامل «ساخت درس → �
   - `src/AI.TeachingAssistant.Web` — Blazor Server ( SSR + Interactive Server )
 - **Blazor Server** برای UI (فایل `App.razor` حالت `InteractiveServerRenderMode(prerender: false)` را ثبت می‌کند)
 - **EF Core 9 + SQLite** (`madreseai.db`)
-- **xUnit** برای تست (`src/AI.TeachingAssistant.Tests` — ۶۰ تست)
+- **xUnit** برای تست (`src/AI.TeachingAssistant.Tests` — ۷۳ تست)
 - فونت **Vazirmatn** از CDN؛ **بدون** کتابخانه UI ثالث (CSS سفارشی در `src/AI.TeachingAssistant.Web/wwwroot/app.css`)
 
 ## Current Architecture
@@ -67,7 +67,7 @@ OpenAiCompatibleProvider  →  xKiro (https://api.xkiro.com/v1)
 ## Database
 
 - **SQLite** از طریق EF Core (`AppDbContext` در `Infrastructure/Persistence/`)
-- یک migration: `InitialCreate` (تاریخ 2026-09-26)
+- دو migration: `InitialCreate` (تاریخ 2026-09-26) و `SmartClassBriefFields` (تاریخ 2026-10-08) — تولید تصویر هیچ تغییر schema ندارد (فقط PayloadJson)
 - جداول: `Teachers`, `Lessons`, `TeachingPackages`, `LessonPlans`, `EducationalContents`, `ClassroomActivities`, `Quizzes`, `MediaPrompts` — همه حذف آبشاری از Teacher
 - Seed: یک معلم دمو («مریم احمدی») و دو درس نمونه در `DatabaseInitializer`
 - فایل `.gitignore` شده (`*.db`) — دیتای local کامیت نمی‌شود
@@ -116,7 +116,7 @@ OpenAiCompatibleProvider  →  xKiro (https://api.xkiro.com/v1)
 
 - قبل از تغییر، کد موجود را بخوان؛ ساختار موجود را دوباره نساز
 - Current را با Future قاطی نکن؛ چیزهای پیاده‌نشده را پیاده‌شده گزارش نکن
-- بعد از هر تغییر: `dotnet build` + `dotnet test` (۶۰ تست باید سبز شود)
+- بعد از هر تغییر: `dotnet build` + `dotnet test` (۷۳ تست باید سبز شود)
 - فلو دمو کامل باید همیشه سالم بماند: Home → ساخت محتوای جدید → فرم → انتخاب محتوا → Generate → مشاهده بسته → ویرایش/کپی/تولید مجدد → درس‌های من → بازگشایی
 
 ## Audit Snapshot
@@ -126,10 +126,10 @@ Audit date: 2026-10-08
 Current branch: main
 Frontend: Blazor Server (.NET 9)، RTL فارسی، CSS سفارشی، بدون کتابخانه UI
 Backend: ASP.NET Core Controllers + Application Services + Background worker
-Database: SQLite via EF Core 9 (1 migration: InitialCreate + seed)
+Database: SQLite via EF Core 9 (2 migrations: InitialCreate + SmartClassBriefFields + seed)
 AI: IAIProvider → MockAIProvider (پیش‌فرض) / OpenAiCompatibleProvider → xKiro (فعال با AI_PROVIDER=xkiro + کلید از env)
 Authentication: Not implemented
 RAG: Not implemented
-Testing: xUnit — ۶۰ تست (همه سبز؛ شامل workflow E2E روی SQLite in-memory)
+Testing: xUnit — ۷۳ تست (همه سبز؛ شامل workflow E2E روی SQLite in-memory)
 Overall MVP status: کامل و قابل دمو با Mock AI
 ```

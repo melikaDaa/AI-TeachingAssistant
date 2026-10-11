@@ -54,7 +54,7 @@
 - **Entities (Domain/Entities):** `Teacher`, `Lesson` (شامل `PackageStatus`, `RequestedSections`, `LastError`), `TeachingPackage` (`CompletedSections`), `LessonPlan`, `EducationalContent`, `ClassroomActivity`, `Quiz`, `MediaPrompt` (Kind: Image/Video)
 - **Value/Model:** `GenerationProgress`، مدل‌های payload در `Domain/Models/` (`LessonPlanModel`, `EducationalContentModel`, `ActivityModel`, `QuizModel`/`QuestionModel`, `ImagePromptModel`, `VideoPromptModel`)
 - **Relationships:** Teacher 1→* Lesson (cascade)؛ Lesson 1↔1 TeachingPackage (cascade)؛ Package 1↔1 هر بخش (cascade)؛ Package 1→* MediaPrompts (cascade). ایندکس‌ها: `IX_Lessons_TeacherId_CreatedAt` و unique index روی FK هر بخش
-- **Migrations:** یک migration — `Infrastructure/Migrations/20260926084831_InitialCreate.cs`
+- **Migrations:** دو migration — `Infrastructure/Migrations/20260926084831_InitialCreate.cs` و `20261008000000_SmartClassBriefFields.cs`
 - **Seed:** `DatabaseInitializer.InitializeAsync` — در استارتاپ: migrate + درج معلم دمو «مریم احمدی» و دو درس نمونه («سلول چیست؟» draft با ۶ بخش، «زنجیره غذایی» draft با ۳ بخش) فقط اگر جدول خالی باشد
 - فایل db در `.gitignore` است
 
