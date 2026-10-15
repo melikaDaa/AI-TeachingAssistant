@@ -1,0 +1,19 @@
+# Build artifacts
+**/bin/
+**/obj/
+
+# Local databases — never bake into the image
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Git / IDE
+.git/
+.vs/
+.idea/
+*.user
+
+# Docs and non-runtime files
+docs/
+*.md
+!README.md
