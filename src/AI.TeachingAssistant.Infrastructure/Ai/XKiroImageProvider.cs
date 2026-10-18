@@ -66,15 +66,23 @@ public class XKiroImageProvider : IImageProvider
             throw new AiProviderException("کلید دسترسی سرویس تولید تصویر تنظیم نشده است.");
 
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(TimeSpan.FromSeconds(Math.Max(30, _options.PollTimeoutSeconds)));
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, _options.PollTimeoutSeconds)));
 
         _logger?.LogInformation(
             "Image request via {Model}: promptChars={Chars} size={Size}",
             _options.Model, request.Prompt.Length, _options.Size);
 
-        var jobId = await CreateJobAsync(request.Prompt, timeoutCts.Token);
-        var url = await PollUntilReadyAsync(jobId, timeoutCts.Token);
-        return await DownloadAsync(url, timeoutCts.Token);
+        try
+        {
+            var jobId = await CreateJobAsync(request.Prompt, timeoutCts.Token);
+            var url = await PollUntilReadyAsync(jobId, timeoutCts.Token);
+            return await DownloadAsync(url, timeoutCts.Token);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // An image deadline is a provider failure, not cancellation of the lesson worker.
+            throw new AiProviderException("تولید تصویر بیش از حد طول کشید. لطفاً دوباره تلاش کنید.", isTransient: true);
+        }
     }
 
     private async Task<string> CreateJobAsync(string prompt, CancellationToken ct)
@@ -99,6 +107,7 @@ public class XKiroImageProvider : IImageProvider
             throw new AiProviderException("ارتباط با سرویس تولید تصویر برقرار نشد. لطفاً دوباره تلاش کنید.", isTransient: true);
         }
 
+        using var responseScope = response;
         if ((int)response.StatusCode is 401 or 403)
             throw new AiProviderException("احراز هویت سرویس تولید تصویر ناموفق بود.");
         if ((int)response.StatusCode == 429)
@@ -143,9 +152,9 @@ public class XKiroImageProvider : IImageProvider
             JobResponse? job;
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, $"images/generations/{Uri.EscapeDataString(jobId)}");
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
-                using var response = await _http.SendAsync(request, ct);
+                using var response = await GetWithRetryAsync(new Uri($"images/generations/{Uri.EscapeDataString(jobId)}", UriKind.Relative), authenticated: true, ct);
+                if ((int)response.StatusCode is 401 or 403)
+                    throw new AiProviderException("احراز هویت سرویس تولید تصویر ناموفق بود.");
                 if (!response.IsSuccessStatusCode)
                 {
                     await LogErrorBodyAsync(response, ct);
@@ -202,7 +211,7 @@ public class XKiroImageProvider : IImageProvider
         HttpResponseMessage response;
         try
         {
-            response = await _http.GetAsync(absolute, ct);
+            response = await GetWithRetryAsync(absolute, authenticated: false, ct);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -213,6 +222,7 @@ public class XKiroImageProvider : IImageProvider
             throw new AiProviderException("دریافت تصویر تولیدشده با مشکل روبه‌رو شد. لطفاً دوباره تلاش کنید.", isTransient: true);
         }
 
+        using var responseScope = response;
         if (!response.IsSuccessStatusCode)
         {
             await LogErrorBodyAsync(response, ct);
@@ -229,6 +239,35 @@ public class XKiroImageProvider : IImageProvider
 
         _logger?.LogInformation("Image downloaded: bytes={Bytes} contentType={ContentType}", data.Length, contentType);
         return new GeneratedImage(data, contentType);
+    }
+
+    // Retry only idempotent GETs. Retrying submission could create duplicate billable jobs.
+    private async Task<HttpResponseMessage> GetWithRetryAsync(Uri uri, bool authenticated, CancellationToken ct)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            TimeSpan? retryAfter = null;
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                if (authenticated)
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+                var response = await _http.SendAsync(request, ct);
+                var transient = (int)response.StatusCode is 408 or 429 or >= 500;
+                if (!transient || attempt >= 2) return response;
+                retryAfter = response.Headers.RetryAfter?.Delta;
+                if (retryAfter is null && response.Headers.RetryAfter?.Date is { } date)
+                    retryAfter = date - DateTimeOffset.UtcNow;
+                response.Dispose();
+            }
+            catch (HttpRequestException) when (attempt < 2 && !ct.IsCancellationRequested) { }
+            catch (OperationCanceledException) when (attempt < 2 && !ct.IsCancellationRequested) { }
+
+            var delay = retryAfter ?? TimeSpan.FromSeconds(attempt + 1);
+            if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
+            _logger?.LogWarning("Temporary image GET failure; retry {Attempt} of 2", attempt + 1);
+            await Task.Delay(delay, ct);
+        }
     }
 
     private async Task LogErrorBodyAsync(HttpResponseMessage response, CancellationToken ct)

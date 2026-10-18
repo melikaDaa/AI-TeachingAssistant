@@ -99,6 +99,84 @@ public sealed class XKiroImageProviderTests
         Assert.False(ex.IsTransient);
     }
 
+    [Fact]
+    public async Task Temporary_poll_and_download_errors_retry_same_job_without_resubmitting()
+    {
+        var submissions = 0;
+        var polls = 0;
+        var downloads = 0;
+        var handler = new StubHandler((request, _) =>
+        {
+            if (request.Method == HttpMethod.Post)
+            {
+                submissions++;
+                return Json(HttpStatusCode.Accepted, """{"id":"existing-job"}""");
+            }
+            if (request.RequestUri!.AbsolutePath.Contains("/images/generations/"))
+            {
+                if (++polls == 1)
+                {
+                    var limited = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+                    limited.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.Zero);
+                    return limited;
+                }
+                return Json(HttpStatusCode.OK, """{"status":"succeeded","data":[{"url":"https://cdn.xkiro.com/a.png"}]}""");
+            }
+            if (++downloads == 1) throw new HttpRequestException("temporary network failure");
+            Assert.Null(request.Headers.Authorization);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[] { 1 }) };
+        });
+
+        var image = await Provider(handler, Options()).GenerateAsync(new ImageGenerationRequest("x"));
+
+        Assert.Single(image.Data);
+        Assert.Equal(1, submissions);
+        Assert.Equal(2, polls);
+        Assert.Equal(2, downloads);
+    }
+
+    [Fact]
+    public async Task Image_deadline_is_provider_failure_instead_of_worker_cancellation()
+    {
+        var options = Options();
+        options.PollTimeoutSeconds = 1;
+        var handler = new StubHandler((_, _) => Json(HttpStatusCode.Accepted, """{"id":"slow-job"}"""));
+
+        var ex = await Assert.ThrowsAsync<AiProviderException>(() =>
+            Provider(handler, options).GenerateAsync(new ImageGenerationRequest("x")));
+
+        Assert.True(ex.IsTransient);
+    }
+
+    [Fact]
+    public async Task Caller_cancellation_is_preserved()
+    {
+        using var cts = new CancellationTokenSource();
+        var handler = new StubHandler((_, _) =>
+        {
+            cts.Cancel();
+            return Json(HttpStatusCode.Accepted, """{"id":"cancelled-job"}""");
+        });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            Provider(handler, Options()).GenerateAsync(new ImageGenerationRequest("x"), cts.Token));
+    }
+
+    [Fact]
+    public async Task Poll_auth_error_is_not_retried()
+    {
+        var calls = 0;
+        var handler = new StubHandler((_, _) => ++calls == 1
+            ? Json(HttpStatusCode.Accepted, """{"id":"job"}""")
+            : new HttpResponseMessage(HttpStatusCode.Unauthorized));
+
+        var ex = await Assert.ThrowsAsync<AiProviderException>(() =>
+            Provider(handler, Options()).GenerateAsync(new ImageGenerationRequest("x")));
+
+        Assert.False(ex.IsTransient);
+        Assert.Equal(2, calls);
+    }
+
     private static HttpResponseMessage Json(HttpStatusCode status, string body) =>
         new(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
