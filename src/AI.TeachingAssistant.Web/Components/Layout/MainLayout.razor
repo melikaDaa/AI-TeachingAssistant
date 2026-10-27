@@ -1,6 +1,9 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @inject MadreseAIApiClient Api
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider Authentication
+@inject Microsoft.JSInterop.IJSRuntime JS
 
 <div class="shell @(_drawerOpen ? "drawer-open" : "")">
     <aside class="sidebar" id="app-sidebar" aria-label="ناوبری اصلی">
@@ -22,10 +25,10 @@
                 <NavLink class="side-link" href="/" Match="NavLinkMatch.All" @onclick="CloseDrawer">
                     <Icon Name="IconName.Dashboard" Size="18" /> داشبورد
                 </NavLink>
-                <NavLink class="side-link" href="/lessons/new" @onclick="CloseDrawer">
+                <NavLink class="side-link" href="@ProtectedLink("/lessons/new")" @onclick="CloseDrawer">
                     <Icon Name="IconName.Plus" Size="18" /> ساخت محتوای جدید
                 </NavLink>
-                <NavLink class="side-link" href="/lessons" @onclick="CloseDrawer">
+                <NavLink class="side-link" href="@ProtectedLink("/lessons")" @onclick="CloseDrawer">
                     <Icon Name="IconName.Lesson" Size="18" /> محتوای من
                 </NavLink>
             </nav>
@@ -34,13 +37,13 @@
         <div class="sidebar-section">
             <div class="sidebar-section-title">ایجاد</div>
             <nav class="side-links">
-                <NavLink class="side-link" href="/lessons/new?mode=lesson" @onclick="CloseDrawer">
+                <NavLink class="side-link" href="@ProtectedLink("/lessons/new?mode=lesson")" @onclick="CloseDrawer">
                     <Icon Name="IconName.Book" Size="18" /> درس
                 </NavLink>
-                <NavLink class="side-link" href="/lessons/new?mode=activity" @onclick="CloseDrawer">
+                <NavLink class="side-link" href="@ProtectedLink("/lessons/new?mode=activity")" @onclick="CloseDrawer">
                     <Icon Name="IconName.Activity" Size="18" /> فعالیت
                 </NavLink>
-                <NavLink class="side-link" href="/lessons/new?mode=quiz" @onclick="CloseDrawer">
+                <NavLink class="side-link" href="@ProtectedLink("/lessons/new?mode=quiz")" @onclick="CloseDrawer">
                     <Icon Name="IconName.Quiz" Size="18" /> آزمون
                 </NavLink>
             </nav>
@@ -67,7 +70,7 @@
         <hr class="sidebar-sep" />
 
         <div class="side-links">
-            <NavLink class="side-link" href="/profile" @onclick="CloseDrawer">
+            <NavLink class="side-link" href="@ProtectedLink("/profile")" @onclick="CloseDrawer">
                 <Icon Name="IconName.Teacher" Size="18" /> پروفایل معلم
             </NavLink>
             <span class="side-link" style="cursor:default" aria-disabled="true">
@@ -90,13 +93,19 @@
                 <BrandMark Size="28" /> مدرس‌یار
             </a>
             <span class="page-title-sm grow">@_pageTitle</span>
-            <a class="header-icon-btn header-new-btn" href="/lessons/new" title="ساخت محتوای جدید" aria-label="ساخت محتوای جدید">
+            <a class="header-icon-btn header-new-btn" href="@ProtectedLink("/lessons/new")" title="ساخت محتوای جدید" aria-label="ساخت محتوای جدید">
                 <Icon Name="IconName.Plus" Size="18" />
             </a>
-            <a class="header-teacher" href="/profile" title="پروفایل معلم">
+            <AuthorizeView>
+              <Authorized>
+            <a class="header-teacher" href="@ProtectedLink("/profile")" title="پروفایل معلم">
                 <span class="avatar"><Icon Name="IconName.Teacher" Size="15" /></span>
                 @_teacherName
             </a>
+            <button class="btn ghost" @onclick="LogoutAsync">خروج</button>
+              </Authorized>
+              <NotAuthorized><a class="btn" href="/account/login">ورود</a></NotAuthorized>
+            </AuthorizeView>
         </header>
 
         <main class="page">
@@ -120,15 +129,30 @@
         _pageTitle = ResolveTitle();
     }
 
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         _pageTitle = ResolveTitle();
         _drawerOpen = false;
+        _ = RefreshAuthenticationAsync();
+    }
+
+    private async Task RefreshAuthenticationAsync()
+    {
+        _authenticated = (await Authentication.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+        await InvokeAsync(StateHasChanged);
     }
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
 
     private void CloseDrawer() => _drawerOpen = false;
+
+    private bool _authenticated;
+
+    private string ProtectedLink(string target) => _authenticated
+        ? target
+        : $"/account/login?returnUrl={Uri.EscapeDataString(target)}";
 
     private string ResolveTitle() => Nav.Uri switch
     {
@@ -141,6 +165,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _authenticated = (await Authentication.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+        if (!_authenticated) return;
+
         try
         {
             var teacher = await Api.GetTeacherAsync();
@@ -150,5 +177,11 @@
         catch
         {
         }
+    }
+
+    private async Task LogoutAsync()
+    {
+        try { await JS.InvokeAsync<int>("madreseLogout"); } catch { }
+        Nav.NavigateTo("/account/login", forceLoad: true);
     }
 }

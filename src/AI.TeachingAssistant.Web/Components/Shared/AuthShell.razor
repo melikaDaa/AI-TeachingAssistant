@@ -1,0 +1,35 @@
+<main class="auth-page" dir="rtl">
+    <a class="auth-home-link" href="/" aria-label="بازگشت به صفحه اصلی مدرس‌یار">بازگشت به صفحه اصلی <span aria-hidden="true">←</span></a>
+    <div class="auth-frame">
+        <aside class="auth-story" aria-label="معرفی مدرس‌یار">
+            <div class="auth-story-top">
+                <a class="auth-logo" href="/" aria-label="مدرس‌یار — صفحه اصلی">
+                    <span class="auth-logo-mark"><BrandMark Size="34" /></span>
+                    <span><strong>مدرس‌یار</strong><small>دستیار هوشمند معلم</small></span>
+                </a>
+                <span class="auth-story-badge"><span></span> همراه مسیر آموزش</span>
+            </div>
+            <div class="auth-story-content">
+                <span class="auth-eyebrow">فضای کاری هوشمند برای معلمان</span>
+                <h2>تدریس بهتر،<br /><em>با همراهی هوشمند</em></h2>
+                <p>از طراحی جلسه درس تا تولید محتوای آموزشی، همه‌چیز را در یک فضای ساده و هوشمند مدیریت کنید.</p>
+                <div class="auth-education-visual" aria-hidden="true">
+                    <div class="auth-visual-orbit auth-orbit-one"></div><div class="auth-visual-orbit auth-orbit-two"></div>
+                    <div class="auth-ai-core"><span>✦</span><small>یار هوشمند</small></div>
+                    <div class="auth-mini-card auth-mini-plan"><span class="auth-mini-icon">▤</span><span><b>طرح درس</b><small>برنامه‌ی جلسه‌ی امروز</small></span><i>✓</i></div>
+                    <div class="auth-mini-card auth-mini-activity"><span class="auth-mini-icon">◇</span><span><b>فعالیت کلاسی</b><small>یادگیری با مشارکت</small></span></div>
+                    <div class="auth-mini-card auth-mini-content"><span class="auth-mini-icon">✎</span><span><b>محتوای آموزشی</b><small>متناسب با پایه‌ی شما</small></span></div>
+                </div>
+            </div>
+            <div class="auth-story-bottom"><span>مدرس‌یار</span><span>همراه معلمان ایران</span></div>
+        </aside>
+        <section class="auth-panel" aria-label="ورود و ساخت حساب">
+            <div class="auth-panel-inner">@ChildContent</div>
+            <p class="auth-legal">مدرس‌یار؛ برای کلاس‌هایی که با فکر و دقت ساخته می‌شوند.</p>
+        </section>
+    </div>
+</main>
+
+@code {
+    [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
+}

@@ -13,6 +13,22 @@ public class TeacherRepository : ITeacherRepository
     public async Task<Teacher?> GetDefaultAsync(CancellationToken ct = default) =>
         await _db.Teachers.OrderBy(t => t.Id).FirstOrDefaultAsync(ct);
 
+    public Task<Teacher?> GetByPhoneAsync(string phoneNumber, CancellationToken ct = default) =>
+        _db.Teachers.FirstOrDefaultAsync(t => t.PhoneNumber == phoneNumber, ct);
+
+    public Task<Teacher?> GetByIdAsync(int id, CancellationToken ct = default) =>
+        _db.Teachers.FirstOrDefaultAsync(t => t.Id == id, ct);
+
+    public async Task<Teacher> AddAsync(Teacher teacher, CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        teacher.CreatedAt = now;
+        teacher.UpdatedAt = now;
+        _db.Teachers.Add(teacher);
+        await _db.SaveChangesAsync(ct);
+        return teacher;
+    }
+
     public async Task<Teacher> UpdateAsync(Teacher teacher, CancellationToken ct = default)
     {
         teacher.UpdatedAt = DateTime.UtcNow;
@@ -42,6 +58,21 @@ public class LessonRepository : ILessonRepository
         return await query.FirstOrDefaultAsync(l => l.Id == id, ct);
     }
 
+    public async Task<Lesson?> GetForTeacherAsync(int id, int teacherId, bool includePackage = false, CancellationToken ct = default)
+    {
+        var query = _db.Lessons.Where(l => l.Id == id && l.TeacherId == teacherId);
+        if (includePackage)
+        {
+            query = query
+                .Include(l => l.Package).ThenInclude(p => p!.LessonPlan)
+                .Include(l => l.Package).ThenInclude(p => p!.EducationalContent)
+                .Include(l => l.Package).ThenInclude(p => p!.Activity)
+                .Include(l => l.Package).ThenInclude(p => p!.Quiz)
+                .Include(l => l.Package).ThenInclude(p => p!.MediaPrompts);
+        }
+        return await query.FirstOrDefaultAsync(ct);
+    }
+
     public async Task<List<Lesson>> ListForTeacherAsync(int teacherId, CancellationToken ct = default) =>
         await _db.Lessons
             .Where(l => l.TeacherId == teacherId)
@@ -68,6 +99,12 @@ public class LessonRepository : ILessonRepository
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
         var affected = await _db.Lessons.Where(l => l.Id == id).ExecuteDeleteAsync(ct);
+        return affected > 0;
+    }
+
+    public async Task<bool> DeleteForTeacherAsync(int id, int teacherId, CancellationToken ct = default)
+    {
+        var affected = await _db.Lessons.Where(l => l.Id == id && l.TeacherId == teacherId).ExecuteDeleteAsync(ct);
         return affected > 0;
     }
 }

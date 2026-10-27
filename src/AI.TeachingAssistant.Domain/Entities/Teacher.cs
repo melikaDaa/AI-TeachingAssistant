@@ -8,4 +8,18 @@ public class Teacher : BaseEntity
     public string Grade { get; set; } = string.Empty;
     public string Subjects { get; set; } = string.Empty;
     public string TeachingStyle { get; set; } = string.Empty;
+
+    /// <summary>Verified E.164 phone. Null for preserved legacy records without an identified owner.</summary>
+    public string? PhoneNumber { get; set; }
+
+    public string? Email { get; set; }
+
+    /// <summary>Versioned salted password hash; null on legacy/OTP-only accounts.</summary>
+    public string? PasswordHash { get; set; }
+
+    /// <summary>HMAC of a single-use password reset token.</summary>
+    public string? PasswordResetTokenHash { get; set; }
+    public DateTime? PasswordResetExpiresAt { get; set; }
+
+    public bool IsActive { get; set; } = true;
 }

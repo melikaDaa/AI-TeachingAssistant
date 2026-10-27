@@ -270,15 +270,11 @@ public class XKiroImageProvider : IImageProvider
         }
     }
 
-    private async Task LogErrorBodyAsync(HttpResponseMessage response, CancellationToken ct)
+    private Task LogErrorBodyAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        string? body = null;
-        try { body = await response.Content.ReadAsStringAsync(ct); }
-        catch { /* body unreadable — status code is enough */ }
         _logger?.LogError(
-            "Image provider returned {Status}: {Body}",
-            (int)response.StatusCode,
-            body is null ? "<unreadable>" : body.Length > 500 ? body[..500] : body);
+            "Image provider returned {Status}", (int)response.StatusCode);
+        return Task.CompletedTask;
     }
 
     private sealed record CreateJobRequest(string Model, string Prompt, int N, string Size);

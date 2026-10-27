@@ -123,16 +123,10 @@ public class OpenAiCompatibleProvider : IAIProvider
             throw new AiProviderException("تعداد درخواست‌ها بیش از حد مجاز است. لطفاً کمی بعد دوباره تلاش کنید.", isTransient: true);
         if (!response.IsSuccessStatusCode)
         {
-            // Server-side diagnostics: upstream error body (truncated) is logged for debugging;
-            // the teacher only ever sees the generic Persian message.
-            string? errBody = null;
-            try { errBody = await response.Content.ReadAsStringAsync(timeoutCts.Token); }
-            catch { /* body unreadable — status code is enough */ }
             _logger?.LogError(
-                "AI provider returned {Status} after {Ms} ms: {Body}",
+                "AI provider returned {Status} after {Ms} ms",
                 (int)response.StatusCode,
-                (long)(DateTime.UtcNow - startedAt).TotalMilliseconds,
-                errBody is null ? "<unreadable>" : errBody.Length > 500 ? errBody[..500] : errBody);
+                (long)(DateTime.UtcNow - startedAt).TotalMilliseconds);
             throw new AiProviderException("سرویس هوش مصنوعی در پاسخ‌دهی به مشکل خورد. لطفاً دوباره تلاش کنید.", isTransient: true);
         }
 

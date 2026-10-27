@@ -30,6 +30,7 @@ public sealed class GenerationWorkflowTests : IDisposable
         _connection.Open();
 
         var services = new ServiceCollection();
+        services.AddScoped<ICurrentTeacher, TestCurrentTeacher>();
         services.AddDbContext<AppDbContext>(o => o.UseSqlite(_connection));
         services.AddSingleton<IAIProvider, MockAIProvider>();
         services.AddSingleton<IImageProvider, DisabledImageProvider>();

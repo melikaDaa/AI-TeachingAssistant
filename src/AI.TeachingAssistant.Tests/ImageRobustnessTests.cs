@@ -32,6 +32,7 @@ public sealed class ImageRobustnessTests
         connection.Open();
 
         var services = new ServiceCollection();
+        services.AddScoped<ICurrentTeacher, TestCurrentTeacher>();
         services.AddDbContext<AppDbContext>(o => o.UseSqlite(connection));
         services.AddSingleton<IAIProvider, MockAIProvider>();
         services.AddSingleton<IImageProvider>(new FailingImageProvider());

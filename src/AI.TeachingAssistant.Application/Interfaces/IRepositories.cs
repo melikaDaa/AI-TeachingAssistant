@@ -5,16 +5,21 @@ namespace AI.TeachingAssistant.Application.Interfaces;
 public interface ITeacherRepository
 {
     Task<Teacher?> GetDefaultAsync(CancellationToken ct = default);
+    Task<Teacher?> GetByPhoneAsync(string phoneNumber, CancellationToken ct = default);
+    Task<Teacher?> GetByIdAsync(int id, CancellationToken ct = default);
+    Task<Teacher> AddAsync(Teacher teacher, CancellationToken ct = default);
     Task<Teacher> UpdateAsync(Teacher teacher, CancellationToken ct = default);
 }
 
 public interface ILessonRepository
 {
     Task<Lesson?> GetByIdAsync(int id, bool includePackage = false, CancellationToken ct = default);
+    Task<Lesson?> GetForTeacherAsync(int id, int teacherId, bool includePackage = false, CancellationToken ct = default);
     Task<List<Lesson>> ListForTeacherAsync(int teacherId, CancellationToken ct = default);
     Task<Lesson> AddAsync(Lesson lesson, CancellationToken ct = default);
     Task UpdateAsync(Lesson lesson, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<bool> DeleteForTeacherAsync(int id, int teacherId, CancellationToken ct = default);
 }
 
 public interface ITeachingPackageRepository

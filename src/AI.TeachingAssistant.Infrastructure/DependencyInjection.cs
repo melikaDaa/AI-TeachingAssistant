@@ -6,20 +6,39 @@ using AI.TeachingAssistant.Infrastructure.Persistence;
 using AI.TeachingAssistant.Infrastructure.Repositories;
 using AI.TeachingAssistant.Infrastructure.Generation;
 using AI.TeachingAssistant.Infrastructure.Storage;
+using AI.TeachingAssistant.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Identity;
+using AI.TeachingAssistant.Domain.Entities;
 
 namespace AI.TeachingAssistant.Infrastructure;
 
 public static class DependencyInjection
 {
     /// <summary>Registers database, repositories, application services, AI provider and the background worker.</summary>
-    public static IServiceCollection AddTeachingAssistantInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddTeachingAssistantInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment = false)
     {
         // ---------- Database (SQLite for MVP; Postgres later via the same DbContext) ----------
         var connectionString = configuration.GetConnectionString("Default") ?? "Data Source=madreseai.db";
         services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
+        var usageOptions = new UsageOptions();
+        configuration.GetSection(UsageOptions.SectionName).Bind(usageOptions);
+        if (usageOptions.DailyTextUnits <= 0) usageOptions.DailyTextUnits = 120;
+        if (usageOptions.DailyImageUnits <= 0) usageOptions.DailyImageUnits = 24;
+        if (usageOptions.TextSectionUnits <= 0) usageOptions.TextSectionUnits = 1;
+        if (usageOptions.RegenerateUnits <= 0) usageOptions.RegenerateUnits = 1;
+        if (usageOptions.ImageUnits <= 0) usageOptions.ImageUnits = 1;
+        if (usageOptions.ReservationLeaseMinutes <= 0) usageOptions.ReservationLeaseMinutes = 120;
+        if (usageOptions.ReconciliationIntervalMinutes <= 0) usageOptions.ReconciliationIntervalMinutes = 5;
+        if (usageOptions.LeaseHeartbeatSeconds <= 0) usageOptions.LeaseHeartbeatSeconds = 30;
+        usageOptions.WorkerId = string.IsNullOrWhiteSpace(usageOptions.WorkerId)
+            ? $"{Environment.MachineName}:{Environment.ProcessId}:{Guid.NewGuid():N}"
+            : usageOptions.WorkerId;
+        services.AddSingleton(usageOptions);
+        services.AddScoped<UsageService>();
+        services.AddScoped<IUsageService>(sp => sp.GetRequiredService<UsageService>());
 
         // ---------- AI provider (mock by default; xKiro via OpenAI-compatible API) ----------
         var aiOptions = new OpenAiCompatibleOptions();
@@ -96,7 +115,11 @@ public static class DependencyInjection
         services.AddScoped<ITeacherRepository, TeacherRepository>();
         services.AddScoped<ILessonRepository, LessonRepository>();
         services.AddScoped<ITeachingPackageRepository, TeachingPackageRepository>();
-
+        services.AddScoped<PasswordAuthenticationService>();
+        services.AddScoped<IPasswordHasher<Teacher>, PasswordHasher<Teacher>>();
+        services.AddScoped<CurrentTeacherContext>();
+        services.AddScoped<ICurrentTeacherContext>(sp => sp.GetRequiredService<CurrentTeacherContext>());
+        services.AddScoped<ICurrentTeacher>(sp => sp.GetRequiredService<CurrentTeacherContext>());
         // ---------- Application services ----------
         services.AddScoped<LessonService>();
         services.AddScoped<TeacherService>();

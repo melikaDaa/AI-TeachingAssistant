@@ -1,5 +1,6 @@
 using AI.TeachingAssistant.Application.Ai;
 using AI.TeachingAssistant.Application.Common;
+using AI.TeachingAssistant.Application.Services;
 using AI.TeachingAssistant.Application.Interfaces;
 using AI.TeachingAssistant.Domain.Entities;
 using AI.TeachingAssistant.Domain.Models;
@@ -20,6 +21,18 @@ public class GenerationCoordinator
     private readonly IImageProvider _images;
     private readonly IImageStore _imageStore;
     private readonly ILogger<GenerationCoordinator> _logger;
+    private readonly ICurrentTeacher _currentTeacher;
+    private readonly IUsageService? _usage;
+    public string UsageRequestKey { get; set; } = Guid.NewGuid().ToString("N");
+    public long JobId { get; set; }
+    public string JobOwnerId { get; set; } = string.Empty;
+    public long JobFencingToken { get; set; }
+    public Func<CancellationToken, Task<bool>>? Heartbeat { get; set; }
+    public Func<CancellationToken, Task<bool>>? CanCommit { get; set; }
+    public Func<CancellationToken, Task>? RequireOwnership { get; set; }
+    public Func<CancellationToken, Task<bool>>? IsCurrentOwner { get; set; }
+    private int _promptTokens;
+    private int _completionTokens;
 
     public GenerationCoordinator(
         SectionGenerationService sections,
@@ -28,7 +41,9 @@ public class GenerationCoordinator
         ITeacherRepository teachers,
         IImageProvider images,
         IImageStore imageStore,
-        ILogger<GenerationCoordinator> logger)
+        ILogger<GenerationCoordinator> logger,
+        ICurrentTeacher currentTeacher,
+        IUsageService? usage = null)
     {
         _sections = sections;
         _lessons = lessons;
@@ -37,6 +52,8 @@ public class GenerationCoordinator
         _images = images;
         _imageStore = imageStore;
         _logger = logger;
+        _currentTeacher = currentTeacher;
+        _usage = usage;
     }
 
     /// <summary>
@@ -46,10 +63,10 @@ public class GenerationCoordinator
     /// </summary>
     public async Task<Result<TeachingPackage>> GenerateSectionAsync(int lessonId, int sectionType, CancellationToken ct = default, bool isSingleSectionJob = true)
     {
-        var lesson = await _lessons.GetByIdAsync(lessonId, includePackage: true, ct);
+        var lesson = await _lessons.GetForTeacherAsync(lessonId, _currentTeacher.TeacherId, includePackage: true, ct);
         if (lesson is null) return Result<TeachingPackage>.Failure("درس یافت نشد.");
 
-        var teacher = await _teachers.GetDefaultAsync(ct);
+        var teacher = await _teachers.GetByIdAsync(_currentTeacher.TeacherId, ct);
         if (teacher is null)
             return Result<TeachingPackage>.Failure("ابتدا پروفایل معلم را تکمیل کنید.");
 
@@ -70,6 +87,13 @@ public class GenerationCoordinator
             sectionType,
             BuildSharedContext(package, sectionType),
             BuildRegeneration(package, sectionType));
+
+        _promptTokens = 0;
+        _completionTokens = 0;
+        void OnUsage(AiUsage usage) { _promptTokens += usage.PromptTokens; _completionTokens += usage.CompletionTokens; }
+        _sections.UsageReported += OnUsage;
+        if (Heartbeat is not null && !await Heartbeat(ct))
+            return Result<TeachingPackage>.Failure("مالکیت این عملیات تغییر کرده است؛ نتیجه ذخیره نشد.");
 
         Result<bool> sectionResult;
         try
@@ -147,6 +171,7 @@ public class GenerationCoordinator
         }
         catch (OperationCanceledException)
         {
+            _sections.UsageReported -= OnUsage;
             throw;
         }
         catch (Exception ex)
@@ -156,9 +181,16 @@ public class GenerationCoordinator
             _logger.LogError(ex, "Unexpected error while generating section {Section} for lesson {LessonId}", sectionType, lessonId);
             sectionResult = Result<bool>.Failure("خطای غیرمنتظره در تولید این بخش رخ داد. لطفاً دوباره تلاش کنید.");
         }
+        finally { _sections.UsageReported -= OnUsage; }
+
+        if (Heartbeat is not null && !await Heartbeat(ct))
+            return Result<TeachingPackage>.Failure("مهلت مالکیت عملیات پایان یافت؛ نتیجه ذخیره نشد.");
+
+        if (RequireOwnership is not null) await RequireOwnership(ct);
 
         if (!sectionResult.Ok)
         {
+            if (_usage is not null) await _usage.CompleteReservationAsync(_currentTeacher.TeacherId, UsageOperation(sectionType), UsageRequestKey + ":" + UsageOperation(sectionType), false, ct: ct);
             lesson.LastError = sectionResult.Error;
             if (isSingleSectionJob)
             {
@@ -175,7 +207,10 @@ public class GenerationCoordinator
             return Result<TeachingPackage>.Failure(sectionResult.Error!);
         }
 
+        if (RequireOwnership is not null) await RequireOwnership(ct);
         lesson.LastError = null;
+        if (_usage is not null) await _usage.CompleteReservationAsync(_currentTeacher.TeacherId, UsageOperation(sectionType), UsageRequestKey + ":" + UsageOperation(sectionType), true,
+            sectionType == ContentTypes.ImagePrompt ? 0 : 1, _promptTokens, _completionTokens, ct);
         MarkSectionCompleted(lesson, package, sectionType);
         if (isSingleSectionJob && lesson.PackageStatus == PackageStatus.Generating)
         {
@@ -183,6 +218,9 @@ public class GenerationCoordinator
             // the package is idle again. Ready mirrors the partial-generation semantics.
             lesson.PackageStatus = PackageStatus.Ready;
         }
+        if (CanCommit is not null && !await CanCommit(ct))
+            return Result<TeachingPackage>.Failure("مالکیت این عملیات تغییر کرده است؛ نتیجه ذخیره نشد.");
+        if (RequireOwnership is not null) await RequireOwnership(ct);
         await _lessons.UpdateAsync(lesson, ct);
         await _packages.UpdateAsync(package, ct);
 
@@ -193,7 +231,7 @@ public class GenerationCoordinator
     /// <summary>Generates all requested sections sequentially, persisting each one as it completes.</summary>
     public async Task<Result<TeachingPackage>> GeneratePackageAsync(int lessonId, CancellationToken ct = default)
     {
-        var lesson = await _lessons.GetByIdAsync(lessonId, includePackage: true, ct);
+        var lesson = await _lessons.GetForTeacherAsync(lessonId, _currentTeacher.TeacherId, includePackage: true, ct);
         if (lesson is null) return Result<TeachingPackage>.Failure("درس یافت نشد.");
 
         var requested = ParseSections(lesson.RequestedSections);
@@ -214,7 +252,7 @@ public class GenerationCoordinator
 
         if (firstError is not null)
         {
-            var current = await _lessons.GetByIdAsync(lessonId, includePackage: true, ct);
+            var current = await _lessons.GetForTeacherAsync(lessonId, _currentTeacher.TeacherId, includePackage: true, ct);
             if (current is not null)
             {
                 current.PackageStatus = PackageStatus.Failed;
@@ -224,7 +262,7 @@ public class GenerationCoordinator
             return Result<TeachingPackage>.Failure(firstError);
         }
 
-        var done = await _lessons.GetByIdAsync(lessonId, includePackage: true, ct);
+            var done = await _lessons.GetForTeacherAsync(lessonId, _currentTeacher.TeacherId, includePackage: true, ct);
         if (done is not null)
         {
             done.PackageStatus = PackageStatus.Ready;
@@ -304,11 +342,15 @@ public class GenerationCoordinator
             var prompt = prompts[i];
             if (string.IsNullOrWhiteSpace(prompt.FinalPrompt)) continue;
 
+            var reservationKey = UsageReservationKeys.Image(UsageRequestKey, i);
             try
             {
+                if (IsCurrentOwner is not null && !await IsCurrentOwner(ct)) throw new InvalidOperationException("Job lease was lost before image provider call.");
+                if (_usage is not null && !await _usage.IsEnabledAsync(_currentTeacher.TeacherId, "image", reservationKey, ct)) continue;
                 var image = await _images.GenerateAsync(new ImageGenerationRequest(prompt.FinalPrompt), ct);
                 prompt.ImageUrl = await _imageStore.SaveAsync(image.Data, image.ContentType, ct);
                 prompt.ImageGeneratedAt = DateTime.UtcNow;
+                if (_usage is not null) await _usage.CompleteReservationAsync(_currentTeacher.TeacherId, "image", reservationKey, true, 1, ct: ct);
             }
             catch (OperationCanceledException)
             {
@@ -316,10 +358,18 @@ public class GenerationCoordinator
             }
             catch (Exception ex)
             {
+                if (_usage is not null) await _usage.CompleteReservationAsync(_currentTeacher.TeacherId, "image", reservationKey, false, ct: ct);
                 _logger.LogWarning(ex, "Image rendering failed for prompt {Index}", i + 1);
             }
         }
     }
+
+    private static string UsageOperation(int sectionType) => sectionType switch
+    {
+        ContentTypes.LessonPlan => "lesson-plan", ContentTypes.EducationalContent => "content",
+        ContentTypes.Activity => "activity", ContentTypes.Quiz => "quiz",
+        ContentTypes.ImagePrompt => "image-prompt", ContentTypes.VideoPrompt => "video-prompt", _ => "other"
+    };
 
     private async Task<TeachingPackage> CreatePackageAsync(Lesson lesson, CancellationToken ct)
     {

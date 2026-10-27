@@ -16,6 +16,9 @@ public class AppDbContext : DbContext
     public DbSet<ClassroomActivity> ClassroomActivities => Set<ClassroomActivity>();
     public DbSet<Quiz> Quizzes => Set<Quiz>();
     public DbSet<MediaPrompt> MediaPrompts => Set<MediaPrompt>();
+    public DbSet<PhoneVerificationChallenge> PhoneVerificationChallenges => Set<PhoneVerificationChallenge>();
+    public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
+    public DbSet<GenerationJobRecord> GenerationJobs => Set<GenerationJobRecord>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -26,6 +29,51 @@ public class AppDbContext : DbContext
             e.Property(x => x.Grade).HasMaxLength(50);
             e.Property(x => x.Subjects).HasMaxLength(200);
             e.Property(x => x.TeachingStyle).HasMaxLength(100);
+            e.Property(x => x.PhoneNumber).HasMaxLength(16);
+            e.HasIndex(x => x.PhoneNumber).IsUnique();
+            e.Property(x => x.Email).HasMaxLength(254);
+            e.HasIndex(x => x.Email).IsUnique();
+            e.Property(x => x.PasswordHash).HasMaxLength(512);
+            e.Property(x => x.PasswordResetTokenHash).HasMaxLength(64);
+        });
+
+        b.Entity<PhoneVerificationChallenge>(e =>
+        {
+            e.Property(x => x.PhoneNumber).HasMaxLength(16).IsRequired();
+            e.Property(x => x.CodeHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.RequestIpHash).HasMaxLength(64).IsRequired();
+            e.HasIndex(x => x.PhoneNumber).IsUnique().HasFilter("\"ConsumedAt\" IS NULL");
+            e.HasIndex(x => new { x.PhoneNumber, x.CreatedAt });
+        });
+
+        b.Entity<UsageEvent>(e =>
+        {
+            e.Property(x => x.Operation).HasMaxLength(40).IsRequired();
+            e.Property(x => x.RequestKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Provider).HasMaxLength(80);
+            e.Property(x => x.Model).HasMaxLength(120);
+            e.Property(x => x.CostStatus).HasMaxLength(30).IsRequired();
+            e.Property(x => x.OutcomeDetail).HasMaxLength(80);
+            e.HasIndex(x => x.RequestKey).IsUnique();
+            e.HasIndex(x => new { x.TeacherId, x.CreatedAtUtc });
+            e.HasOne<Teacher>().WithMany().HasForeignKey(x => x.TeacherId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<GenerationJobRecord>(e =>
+        {
+            e.Property(x => x.RequestKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.OwnerId).HasMaxLength(100);
+            e.Property(x => x.FailureCode).HasMaxLength(80);
+            e.HasIndex(x => x.RequestKey).IsUnique();
+            e.HasIndex(x => new { x.Status, x.CreatedAtUtc });
+        });
+
+        b.Entity<UsageEvent>(e =>
+        {
+            e.Property(x => x.Provider).HasMaxLength(80);
+            e.Property(x => x.Model).HasMaxLength(120);
+            e.Property(x => x.CostStatus).HasMaxLength(30).IsRequired();
+            e.Property(x => x.OutcomeDetail).HasMaxLength(80);
         });
 
         b.Entity<Lesson>(e =>

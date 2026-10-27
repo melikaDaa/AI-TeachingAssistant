@@ -16,8 +16,21 @@ public class MadreseAIApiClient
 
     public MadreseAIApiClient(HttpClient http) => _http = http;
 
+    public async Task LogoutAsync()
+    {
+        var csrf = await _http.GetFromJsonAsync<CsrfResponse>("api/account/csrf");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "api/account/logout");
+        if (!string.IsNullOrWhiteSpace(csrf?.Token)) request.Headers.Add("X-CSRF-TOKEN", csrf.Token);
+        using var response = await _http.SendAsync(request);
+        if (!response.IsSuccessStatusCode)
+            throw new MadreseAIApiException("Could not log out. Please try again.");
+    }
+
+    private sealed record CsrfResponse(string Token);
+
     // ---------- teacher ----------
     public Task<TeacherDto?> GetTeacherAsync() => Get<TeacherDto>("api/teacher");
+    public Task<UsageDto?> GetUsageAsync() => Get<UsageDto>("api/usage");
     public Task<TeacherDto?> UpdateTeacherAsync(UpdateTeacherRequest request) => Send<UpdateTeacherRequest, TeacherDto>(HttpMethod.Put, "api/teacher", request);
 
     // ---------- lessons ----------
@@ -79,4 +92,20 @@ public class MadreseAIApiClient
     {
         public string? Error { get; set; }
     }
+}
+
+public sealed class UsageDto
+{
+    public UsageBucketDto Text { get; set; } = new();
+    public UsageBucketDto Image { get; set; } = new();
+    public DateTime ResetsAtUtc { get; set; }
+    public int WarningPercent { get; set; }
+    public Dictionary<string, int> Operations { get; set; } = new();
+}
+
+public sealed class UsageBucketDto
+{
+    public int Limit { get; set; }
+    public int Used { get; set; }
+    public int Remaining { get; set; }
 }

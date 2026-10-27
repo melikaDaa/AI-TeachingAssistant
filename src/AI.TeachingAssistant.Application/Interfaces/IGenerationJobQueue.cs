@@ -6,5 +6,5 @@ namespace AI.TeachingAssistant.Application.Interfaces;
 /// </summary>
 public interface IGenerationJobQueue
 {
-    void Enqueue(int lessonId, int sectionType);
+    Task<string> EnqueueAsync(int lessonId, int teacherId, int sectionType, string requestKey, CancellationToken ct = default);
 }

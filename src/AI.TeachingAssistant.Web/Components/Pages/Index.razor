@@ -1,5 +1,7 @@
 @page "/"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @inject MadreseAIApiClient Api
+@inject AuthenticationStateProvider Authentication
 
 <PageTitle>مدرس‌یار — داشبورد</PageTitle>
 
@@ -11,10 +13,10 @@
             شرایط کلاست را بگو تا یک جلسه آموزشی متناسب با پایه، زمان و سطح دانش‌آموزانت طراحی کنیم.
         </p>
         <div class="hero-cta-group">
-            <a class="btn big ai" href="/lessons/new?mode=lesson">
+            <a class="btn big ai" href="@ProtectedLink("/lessons/new?mode=lesson")">
                 <Icon Name="IconName.Sparkle" Size="18" /> طراحی یک جلسه
             </a>
-            <a class="btn big ghost" href="/lessons">
+            <a class="btn big ghost" href="@ProtectedLink("/lessons")">
                 محتوای من <Icon Name="IconName.ArrowLeft" Size="16" />
             </a>
         </div>
@@ -28,19 +30,19 @@
     <h2>قابلیت‌ها</h2>
 </div>
 <div class="feature-grid">
-    <a class="feature-card" href="/lessons/new?mode=lesson">
+    <a class="feature-card" href="@ProtectedLink("/lessons/new?mode=lesson")">
         <span class="feature-icon"><Icon Name="IconName.Book" Size="22" /></span>
         <h3>طراحی یک جلسه</h3>
         <p>یک جلسه آموزشی کامل و منسجم با هدف، فعالیت، ارزشیابی و تکلیف.</p>
         <span class="feature-cta">طراحی جلسه <Icon Name="IconName.ArrowLeft" Size="14" /></span>
     </a>
-    <a class="feature-card" href="/lessons/new?mode=activity">
+    <a class="feature-card" href="@ProtectedLink("/lessons/new?mode=activity")">
         <span class="feature-icon"><Icon Name="IconName.Activity" Size="22" /></span>
         <h3>ساخت فعالیت</h3>
         <p>فعالیت تعاملی کلاسی با دستورالعمل اجرا و وسایل لازم.</p>
         <span class="feature-cta">ساخت فعالیت <Icon Name="IconName.ArrowLeft" Size="14" /></span>
     </a>
-    <a class="feature-card" href="/lessons/new?mode=quiz">
+    <a class="feature-card" href="@ProtectedLink("/lessons/new?mode=quiz")">
         <span class="feature-icon"><Icon Name="IconName.Quiz" Size="22" /></span>
         <h3>ساخت آزمون</h3>
         <p>آزمون چهارگزینه‌ای و کوتاه با پاسخ‌نامه و توضیحات.</p>
@@ -92,13 +94,23 @@
 
 <div class="section-header" style="margin-top: var(--space-8)">
     <h2>آخرین محتوا</h2>
-    @if (_lessons is { Count: > 0 })
+    @if (_isAuthenticated && _lessons is { Count: > 0 })
     {
         <a class="section-link" href="/lessons">مشاهده همه <Icon Name="IconName.ArrowLeft" Size="15" /></a>
     }
 </div>
 
-@if (_lessons is null)
+@if (!_isAuthenticated)
+{
+    <div class="empty">
+        <span class="big"><img src="assets/madrese-assistant.png" alt="" style="width:80px;height:80px" /></span>
+        <h2>برای دیدن محتوای شخصی وارد شوید</h2>
+        <p>صفحه اصلی و معرفی امکانات برای همه در دسترس است. برای ساخت یا مشاهده محتوای خود وارد حساب شوید.</p>
+        <a class="btn" href="/account/login">ورود</a>
+        <a class="btn ghost" href="/account/register">ساخت حساب</a>
+    </div>
+}
+else if (_lessons is null)
 {
     <div class="empty"><span class="big"><Icon Name="IconName.Loader" Size="26" CssClass="spin" /></span>در حال بارگذاری...</div>
 }
@@ -141,9 +153,13 @@ else
 @code {
     private List<LessonSummaryDto>? _lessons;
     private string _teacherName = "معلم عزیز";
+    private bool _isAuthenticated;
 
     protected override async Task OnInitializedAsync()
     {
+        _isAuthenticated = (await Authentication.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+        if (!_isAuthenticated) return;
+
         try
         {
             var teacher = await Api.GetTeacherAsync();
@@ -157,6 +173,9 @@ else
         {
         }
 
-        _lessons = await Api.GetLessonsAsync();
+        try { _lessons = await Api.GetLessonsAsync() ?? new(); }
+        catch { _lessons = new(); }
     }
+
+    private string ProtectedLink(string target) => _isAuthenticated ? target : $"/account?returnUrl={Uri.EscapeDataString(target)}";
 }

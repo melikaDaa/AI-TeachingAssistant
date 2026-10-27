@@ -11,7 +11,7 @@
 ## Target Users
 
 - معلمان مدارس ایران (ابتدایی، متوسطه اول، متوسطه دوم — ثابت‌های `TeachingLevels`)
-- در اجرای فعلی: یک معلم دمو واحد — «مریم احمدی» (seed پیش‌فرض؛ Authentication وجود ندارد)
+- ثبت‌نام و ورود ایمیل/گذرواژه در کد فعلی وجود دارد؛ Seed خودکار معلم دمو در startup انجام نمی‌شود. ممکن است دیتابیس‌های قدیمی داده دمو داشته باشند.
 
 ## Problem
 
@@ -30,7 +30,7 @@
 
 ## Current User Journey
 
-مسیر واقعی و پیاده‌شده (تأییدشده با تست E2E مرورگر):
+مسیر UI مورد انتظار و پیاده‌شده؛ این عبارت به‌تنهایی ادعای پوشش تست E2E مرورگر نیست:
 
 ```text
 Home (/)
@@ -67,25 +67,25 @@ Home (/)
 | Delete (با تأیید مرورگر) | Implemented | `Lessons.razor` + `DELETE /api/lessons/{id}` |
 | AI Provider abstraction | Implemented | `Application/Common/IAIProvider.cs` |
 | Mock AI Provider | Implemented (پیش‌فرض) | `Infrastructure/Ai/MockAIProvider.cs` |
-| OpenAI-compatible Provider | Implemented in code, **Not configured** (ApiKey خالی؛ فعال‌ساز: `AI_PROVIDER=openai`) | `Infrastructure/Ai/OpenAiCompatibleProvider.cs` |
+| OpenAI-compatible Provider | Implemented in code; انتخاب با `AI_PROVIDER=xkiro` یا `openai` و نیازمند API key | `Infrastructure/Ai/OpenAiCompatibleProvider.cs` |
 | Partial-failure retry per section | Partially implemented (بخش‌های آماده سالم می‌مانند و از تب همان بخش «✨ ساخت همین بخش» ممکن است؛ badge اختصاصی «تولید نشد» در UI نیست) | `TeachingPackageView.razor` |
 | Profile (نام/مقطع/پایه/دروس/سبک تدریس) | Implemented | `.../Pages/Profile.razor` |
-| Authentication | Not implemented | — |
+| Email/password authentication | Implemented in current code; cookie-based registration/login; recovery is disabled | `Api/Controllers/AccountController.cs` |
 | RAG / Knowledge Base | Not implemented | — |
 | Multi-teacher / Multi-tenancy | Not implemented | — |
 
 ## Current Limitations
 
 - هوش واقعی مصنوعی در اجرای عادی نیست؛ خروجی‌ها Mock هستند (ساختار و اعتبارسنجی واقعی، محتوا الگویی topic-aware)
-- صف تولید in-memory است؛ با ری‌استارت پروسه، jobهای در صف از بین می‌روند (وضعیت درس می‌تواند generating بماند)
+- درباره durability صف، این سند وضعیت نسخه قابل انتشار را ادعا نمی‌کند؛ implementation و migrationهای محلی باید پیش از انتشار جداگانه تأیید شوند.
 - ویرایش پرامپت‌های تصویر/ویدئو از مسیر ویرایش JSON پشتیبانی نمی‌شود (فقط کپی)
-- تک‌کاربره؛ هیچ احراز هویت یا جداسازی داده‌ای بین معلمان نیست
+- بازیابی خودکار گذرواژه فعال نیست. وجود login و teacher-scoping به‌تنهایی تضمین hardening کامل یا پشتیبانی scale-out نیست.
 - تک‌نمونه (single-instance) — صف و WebSocket مکالمه Blazor برای scale-out مناسب نیستند
 
 ## Future Direction
 
-- اتصال Provider واقعی (OpenAI-compatible تنظیم‌شده با متغیرهای `AI_*`) — زیرساخت آماده است
+- بهبودهای Provider واقعی و مدیریت هزینه/توکن، بر اساس نیاز محصول و تنظیمات استقرار
 - Structured Output سخت‌گیرانه‌تر و کنترل token/cost
 - RAG و دانش‌نامه معلم (کتاب درسی، جزوات)
-- Authentication و چند-کاربره‌سازی، PostgreSQL
+- بازیابی امن حساب، hardening چندکاربره و PostgreSQL
 - badge «تولید نشد» + دکمه retry اختصاصی در تب‌ها (تکمیل partial-failure UI)

@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Keep named build-output folders (for example binAuthVerify) out of SDK item globs. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);**/bin*/**;**/obj*/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

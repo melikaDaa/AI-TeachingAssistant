@@ -1,0 +1,14 @@
+@page "/account"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+<PageTitle>ورود به مدرس‌یار</PageTitle>
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider Authentication
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        if ((await Authentication.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
+            Navigation.NavigateTo("/", forceLoad: true);
+        else
+            Navigation.NavigateTo("/account/login", forceLoad: true);
+    }
+}

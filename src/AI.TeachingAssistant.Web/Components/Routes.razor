@@ -1,6 +1,24 @@
+<CascadingAuthenticationState>
 <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        @if (routeData.PageType == typeof(AI.TeachingAssistant.Web.Components.Pages.Index) ||
+             routeData.PageType == typeof(AI.TeachingAssistant.Web.Components.Pages.Account) ||
+             routeData.PageType == typeof(AI.TeachingAssistant.Web.Components.Pages.Login) ||
+             routeData.PageType == typeof(AI.TeachingAssistant.Web.Components.Pages.Register) ||
+             routeData.PageType == typeof(AI.TeachingAssistant.Web.Components.Pages.ForgotPassword) ||
+             routeData.PageType == typeof(AI.TeachingAssistant.Web.Components.Pages.ResetPassword))
+        {
+            <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        }
+        else
+        {
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                <RedirectToAccount />
+            </NotAuthorized>
+        </AuthorizeRouteView>
+        }
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
+</CascadingAuthenticationState>

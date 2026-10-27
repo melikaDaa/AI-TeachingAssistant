@@ -29,7 +29,7 @@ WORKDIR /app
 # Persistent-data root. On Liara mount a Disk at /app/data.
 #   SQLite : /app/data/madreseai.db              (ConnectionStrings__Default)
 #   Media  : /app/data/generated-images          (AI_IMAGE_STORAGE_ROOT)
-RUN mkdir -p /app/data/generated-images
+RUN mkdir -p /app/data/generated-images && chown -R app:app /app/data
 
 COPY --from=build /app/publish .
 
@@ -40,6 +40,14 @@ ENV ASPNETCORE_ENVIRONMENT=Production
 # Persist SQLite + generated images on the mounted disk (override anytime in dashboard).
 ENV ConnectionStrings__Default="Data Source=/app/data/madreseai.db"
 ENV AI_IMAGE_STORAGE_ROOT=/app/data/generated-images
+
+# REQUIRED secret that must be provided in the hosting dashboard (never baked into the image):
+#   InternalAssertion__Secret=<long random value>
+# The in-process Web→API bridge signs requests with this HMAC secret; without it every
+# UI data call (profile, lessons, generation) fails with 401/500 while login still works.
+# The in-process API base URL needs no setting: it defaults to this container's loopback port 80.
+
+USER app
 
 EXPOSE 80
 

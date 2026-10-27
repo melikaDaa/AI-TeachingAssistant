@@ -1,4 +1,5 @@
 @page "/profile"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @inject MadreseAIApiClient Api
 
 <PageTitle>مدرس‌یار — پروفایل</PageTitle>
@@ -14,6 +15,41 @@
 {
     <div class="edit-note" style="background:var(--success-light);color:var(--success-dark)">✓ پروفایل ذخیره شد.</div>
 }
+
+<section class="card usage-card" aria-labelledby="usage-title">
+    <h2 id="usage-title">مصرف امروز</h2>
+    @if (_usageLoading)
+    {
+        <p>در حال دریافت آمار مصرف…</p>
+    }
+    else if (_usage is not null)
+    {
+        <div class="usage-grid">
+            <div class="usage-donut" style="--usage:@Percent(_usage.Text.Used, _usage.Text.Limit)%" role="img" aria-label="@Percent(_usage.Text.Used, _usage.Text.Limit) درصد مصرف متنی">
+                <span>@Percent(_usage.Text.Used, _usage.Text.Limit)٪</span>
+            </div>
+            <div>
+                <strong>تولید متن و درس</strong>
+                <p>@_usage.Text.Used از @_usage.Text.Limit واحد · باقی‌مانده @_usage.Text.Remaining</p>
+                <div class="usage-bar"><span style="width:@Percent(_usage.Text.Used, _usage.Text.Limit)%"></span></div>
+                <strong>تولید تصویر</strong>
+                <p>@_usage.Image.Used از @_usage.Image.Limit واحد · باقی‌مانده @_usage.Image.Remaining</p>
+                <div class="usage-bar image"><span style="width:@Percent(_usage.Image.Used, _usage.Image.Limit)%"></span></div>
+                <small>بازنشانی: @_usage.ResetsAtUtc.ToLocalTime().ToString("HH:mm")</small>
+            </div>
+        </div>
+        @if (Percent(_usage.Text.Used, _usage.Text.Limit) >= _usage.WarningPercent)
+        {
+            <p class="usage-warning">بخش زیادی از ظرفیت امروز مصرف شده است؛ سهمیه در زمان اعلام‌شده دوباره در دسترس خواهد بود.</p>
+        }
+        <h3>تفکیک عملیات</h3>
+        @foreach (var item in _usage.Operations)
+        {
+            <div class="usage-operation"><span>@OperationLabel(item.Key)</span><span>@item.Value</span></div>
+        }
+    }
+    else if (_usageError is not null) { <p class="error-banner">@_usageError</p> }
+</section>
 
 @if (_loaded)
 {
@@ -68,6 +104,9 @@ else
     private bool _loaded;
     private bool _saved;
     private bool _saving;
+    private bool _usageLoading = true;
+    private UsageDto? _usage;
+    private string? _usageError;
     private string? _error;
 
     private string _fullName = string.Empty;
@@ -90,13 +129,23 @@ else
                 _style = teacher.TeachingStyle;
             }
             _loaded = true;
+            _usage = await Api.GetUsageAsync();
         }
         catch (MadreseAIApiException ex)
         {
             _error = ex.Message;
             _loaded = true;
+            _usageError = ex.Message;
         }
+        finally { _usageLoading = false; }
     }
+
+    private static int Percent(int used, int limit) => limit <= 0 ? 0 : Math.Clamp((int)Math.Round(100d * used / limit), 0, 100);
+    private static string OperationLabel(string key) => key switch
+    {
+        "lesson-plan" => "طرح درس", "content" => "محتوای آموزشی", "activity" => "فعالیت کلاسی", "quiz" => "آزمون",
+        "regenerate" => "تولید مجدد", "image" => "تصویر", "video-prompt" => "پرامپت ویدئو", _ => "سایر"
+    };
 
     private async Task Save()
     {

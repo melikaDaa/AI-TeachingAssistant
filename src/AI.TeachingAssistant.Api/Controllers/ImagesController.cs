@@ -13,6 +13,7 @@ public class ImagesController : ControllerBase
     public ImagesController(IImageStore store) => _store = store;
 
     [HttpGet("{fileName}")]
+    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
     public async Task<IActionResult> Get(string fileName, CancellationToken ct)
     {
         var image = await _store.GetAsync(fileName, ct);

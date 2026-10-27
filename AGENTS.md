@@ -22,16 +22,16 @@ MVP — فعال و قابل دمو. جریان کامل «ساخت درس → �
   - `src/AI.TeachingAssistant.Infrastructure` — EF Core/SQLite، Repositoryها، AI Providerها، صف تولید
   - `src/AI.TeachingAssistant.Api` — کنترلرهای REST، middleware خطا، rate limiting
   - `src/AI.TeachingAssistant.Web` — Blazor Server ( SSR + Interactive Server )
-- **Blazor Server** برای UI (فایل `App.razor` حالت `InteractiveServerRenderMode(prerender: false)` را ثبت می‌کند)
+- **Blazor Server** برای UI (فایل `App.razor` رندر ترکیبی `InteractiveServerRenderMode(prerender: true)` را ثبت می‌کند — صفحات اول SSR می‌شوند و بعد وارد Circuit تعاملی می‌شوند)
 - **EF Core 9 + SQLite** (`madreseai.db`)
-- **xUnit** برای تست (`src/AI.TeachingAssistant.Tests` — ۷۳ تست)
+- **xUnit** برای تست (`src/AI.TeachingAssistant.Tests` — ۹۴ تست)
 - فونت **Vazirmatn** از CDN؛ **بدون** کتابخانه UI ثالث (CSS سفارشی در `src/AI.TeachingAssistant.Web/wwwroot/app.css`)
 
 ## Current Architecture
 
 ```text
 Blazor Server UI (Web)
-   ↓  MadreseAIApiClient (HTTP به همان هاست)
+   ↓  MadreseAIApiClient (HTTP داخلی به همان هاست، امضای HMAC)
 API Controllers (Api)  ← در همان پروسه Web هم سرو می‌شوند (Web/Program.cs)
    ↓
 Application Services (LessonService, GenerationCoordinator, ...)
@@ -40,6 +40,8 @@ Repositories (Infrastructure) → EF Core → SQLite
 ```
 
 تولید محتوا از HTTP جدا است: کنترلر فقط job را در `GenerationJobQueue` صف می‌کند و `GenerationJobWorker` (BackgroundService) یکی‌یکی تولید می‌کند. جزئیات کامل در `docs/architecture.md`.
+
+**پل داخلی Web→API:** کامپوننت‌های Blazor مستقیماً entity نمی‌بینند؛ `MadreseAIApiClient` به API همین هاست HTTP می‌زند و `InternalAssertionHandler` با HMAC کوتاه‌عمر امضا می‌کند (`InternalAssertionMiddleware` اعتبارسنجی و `ICurrentTeacherContext` را می‌سازد). این middleware باید **بین** `UseAuthentication` و `UseAuthorization` اجرا شود (والا fallback policy درخواست بدون کوکی را 401 می‌کند) و بعد از اعتبارسنجی `context.User` را می‌سازد. رمز مشترک `InternalAssertion:Secret` الزامی است: محلی با User Secrets (`dotnet user-secrets set "InternalAssertion:Secret" ...`)، تولید با env `InternalAssertion__Secret`. بدون آن لاگین کار می‌کند ولی همه داده‌ها 401/500 می‌شوند. `InternalApi:BaseUrl` اختیاری است و پیش‌فرض از URL گوش‌دادنِ خود هاست استخراج می‌شود.
 
 ## Current AI Architecture
 
@@ -57,7 +59,7 @@ OpenAiCompatibleProvider  →  xKiro (https://api.xkiro.com/v1)
 - فعال‌سازی xKiro: `AI_PROVIDER=xkiro` + `AI_API_KEY` (یا `XKIRO_API_KEY`)
 - **API Key: فقط Environment Variable / Secret Manager** — هرگز در repo، log یا exception
 - Model از `AI_MODEL` (پیش‌فرض `qwen/qwen3.5-flash:free`؛ فرمت vendor/model از کاتالوگ xKiro)؛ Base URL از `AI_BASE_URL` (پیش‌فرض xKiro)
-- مدل جایگزین از `AI_FALLBACK_MODEL` / کلید `AI:FallbackModel` (پیش‌فرض خالی = failover غیرفعال)؛ در فاز ۳ فقط برای خطاهای گذرای دسترس‌پذیری (timeout/شبکه/429/5xx) یک تلاش واحد با همان قرارداد درخواست روی مدل جایگزین انجام می‌شود — `qwen/qwen3.7-flash:free` در کاتالوگ و اجرای واقعی xKiro تأیید شده است
+- مدل جایگزین از `AI_FALLBACK_MODEL` / کلید `AI:FallbackModel` خوانده می‌شود؛ مقدار مؤثر به تنظیمات runtime وابسته است (در `Api/appsettings.json` فعلی مقدار دارد). اگر مقدار خالی باشد failover خاموش است؛ در خطاهای گذرای دسترس‌پذیری فقط یک تلاش روی مدل جایگزین انجام می‌شود.
 - Prompt Builder جدا برای هر بخش در `src/AI.TeachingAssistant.Application/Prompts/`
 - خروجی AI با `AiResponseValidator` اعتبارسنجی می‌شود (۱ retry؛ invalid JSON → تلاش دوم → در صورت شکست Failed)
 - هر builder پرامپت یک `Temperature` اختصاصی دارد (آزمون 0.3؛ طرح/محتوا 0.7؛ فعالیت/پرامپت‌ها 0.8)؛ بعد از هر بخش، زمینه فشرده‌ای از طرح درس/محتوای همان بسته (`SharedLessonContext`) به پرامپت بخش‌های بعدی تزریق می‌شود؛ کنترل خلوص زبان فارسی (نویسه‌های زبان‌های دیگر / لاتین بیرون از «فارسی (English)»؛ اندازه‌های کاغذ مثل A4 مجازند) و retry خطاهای گذرای Provider نیز در `SectionGenerationService` است؛ مصرف توکن واقعی هر فراخوانی از `usage` گیت‌وی خوانده و لاگ می‌شود (`AiResponse.Usage` + خط `Token usage for …`)
@@ -67,9 +69,9 @@ OpenAiCompatibleProvider  →  xKiro (https://api.xkiro.com/v1)
 ## Database
 
 - **SQLite** از طریق EF Core (`AppDbContext` در `Infrastructure/Persistence/`)
-- دو migration: `InitialCreate` (تاریخ 2026-09-26) و `SmartClassBriefFields` (تاریخ 2026-10-08) — تولید تصویر هیچ تغییر schema ندارد (فقط PayloadJson)
-- جداول: `Teachers`, `Lessons`, `TeachingPackages`, `LessonPlans`, `EducationalContents`, `ClassroomActivities`, `Quizzes`, `MediaPrompts` — همه حذف آبشاری از Teacher
-- Seed: یک معلم دمو («مریم احمدی») و دو درس نمونه در `DatabaseInitializer`
+- Migrationها در `Infrastructure/Migrations/` نگهداری می‌شوند؛ فهرست و وضعیت انتشار را از نسخه هدف بررسی کن و تعداد ثابت را مبنا قرار نده.
+- جداول: `Teachers` (با Email/PasswordHash و OTP fields)، `Lessons`، `TeachingPackages`، `LessonPlans`، `EducationalContents`، `ClassroomActivities`، `Quizzes`، `MediaPrompts` — همه حذف آبشاری از Teacher
+- Startup در `DatabaseInitializer` migrationها را اعمال می‌کند و Seed نمی‌کند؛ ثبت‌نام ایمیل/گذرواژه حساب ایجاد می‌کند. متغیر `DemoData__Seed` در startup بررسی‌شده مصرف نمی‌شود.
 - فایل `.gitignore` شده (`*.db`) — دیتای local کامیت نمی‌شود
 
 ## Frontend Rules
@@ -96,9 +98,9 @@ OpenAiCompatibleProvider  →  xKiro (https://api.xkiro.com/v1)
 
 ## Important Constraints
 
-- **Authentication نداریم** — یک معلم پیش‌فرض (seed) برای همه است
+- **Authentication: ایمیل/گذرواژه با کوکی (جزئیات `docs/email-password-auth.md`)** — لاگین/ثبت‌نام با CSRF و rate limit؛ داده‌های هر معلم از طریق پل HMAC داخلی با `teacher_id` جداسازی می‌شود
 - **Provider واقعی: xKiro** — فعال‌سازی فقط با env (`AI_PROVIDER=xkiro`)؛ بدون کلید، سیستم روی Mock می‌ماند
-- **Secret فقط از Environment/Secret Manager** — هرگز در appsettings، git، log، exception یا frontend
+- **Secret فقط از Environment/Secret Manager** — هرگز در appsettings، git، log، exception یا frontend؛ `InternalAssertion:Secret` برای پل داخلی الزامی است (بدون آن همه داده‌ها 401/500 می‌شود)
 - **PostgreSQL / Redis / RAG / Vector DB / PDF / Google Flow API وجود ندارند**
 - Contract های عددی بخش‌ها (`ContentTypes`: 1=طرح درس ... 6=پرامپت ویدئو) قرارداد پایدار API هستند
 - Migration های موجود را خراب نکن؛ تغییر schema فقط با migration جدید
@@ -106,10 +108,10 @@ OpenAiCompatibleProvider  →  xKiro (https://api.xkiro.com/v1)
 
 ## Things Not Implemented Yet
 
-- Authentication و چند-کاربره
+- بازیابی رمز عبور / بازیابی حساب، چند-کاربره بودن پیشرفته و لینک ایمیل-به-حساب (ورود OTP تلفنی موجود ولی غیرفعال است)
 - PostgreSQL، Redis، RAG، آپلود PDF (RAG مرحله بعد)
 - ویرایش ساختاریافته پرامپت‌های تصویر/ویدئو (فقط کپی ممکن است)
-- صف تولید مقاوم به ری‌استارت (صف فعلی in-memory است)
+- وضعیت durable بودن صف را برای نسخه قابل انتشار از روی کد و migrationهای همان نسخه تثبیت کن؛ بخش‌های جدید صف در workspace ممکن است هنوز untracked باشند.
 - Responses API (فعلاً `/chat/completions` کافی است) و structured output با json_schema
 
 ## Development Principles
@@ -120,6 +122,8 @@ OpenAiCompatibleProvider  →  xKiro (https://api.xkiro.com/v1)
 - فلو دمو کامل باید همیشه سالم بماند: Home → ساخت محتوای جدید → فرم → انتخاب محتوا → Generate → مشاهده بسته → ویرایش/کپی/تولید مجدد → درس‌های من → بازگشایی
 
 ## Audit Snapshot
+
+> **Historical snapshot:** بخش زیر ثبت وضعیت زمان ممیزی درج‌شده در آن است؛ مرجع وضعیت جاری نیست. برای واقعیت فعلی از بخش‌های بالاتر و کد همان revision استفاده کنید. متن تاریخی حفظ شده است.
 
 ```text
 Audit date: 2026-10-08

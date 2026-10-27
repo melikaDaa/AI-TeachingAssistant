@@ -1,0 +1,54 @@
+@page "/account/register"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@inject Microsoft.JSInterop.IJSRuntime JS
+@inject NavigationManager Navigation
+
+<PageTitle>ساخت حساب مدرس‌یار</PageTitle>
+<AuthShell>
+    <div class="auth-heading"><span class="auth-step">شروع رایگان</span><h1>به مدرس‌یار خوش آمدید</h1><p>حساب خود را بسازید و طراحی هوشمند درس را شروع کنید.</p></div>
+    @if (_error is not null) { <div class="auth-alert auth-alert-error" role="alert"><span class="auth-alert-symbol" aria-hidden="true">!</span><span>@_error</span></div> }
+    <EditForm Model="_form" FormName="account-register" OnValidSubmit="SubmitAsync" class="auth-form" aria-busy="@_busy">
+        <DataAnnotationsValidator />
+        <div class="auth-field"><label for="fullname">نام و نام خانوادگی</label><InputText id="fullname" class="auth-input" autocomplete="name" placeholder="نامی که با آن صدایتان کنیم" @bind-Value="_form.FullName" /><ValidationMessage For="() => _form.FullName" /></div>
+        <div class="auth-field"><label for="identifier">نشانی ایمیل</label><InputText id="identifier" class="auth-input" type="email" dir="ltr" autocomplete="email" placeholder="name@example.com" @bind-Value="_form.Identifier" /><ValidationMessage For="() => _form.Identifier" /></div>
+        <div class="auth-field"><label for="password">گذرواژه</label><div class="auth-password"><InputText id="password" class="auth-input" type="@PasswordType" autocomplete="new-password" placeholder="حداقل ۱۲ نویسه، شامل حرف و عدد" @bind-Value="_form.Password" /><button type="button" class="auth-toggle" @onclick="TogglePassword" aria-pressed="@_showPassword" aria-label="@(_showPassword ? "پنهان کردن گذرواژه" : "نمایش گذرواژه")">@(_showPassword ? "پنهان" : "نمایش")</button></div><ValidationMessage For="() => _form.Password" /><small class="auth-hint">برای امنیت بیشتر، از گذرواژه‌ای منحصربه‌فرد استفاده کنید.</small></div>
+        <div class="auth-field"><label for="confirm">تکرار گذرواژه</label><InputText id="confirm" class="auth-input" type="password" autocomplete="new-password" placeholder="گذرواژه را دوباره وارد کنید" @bind-Value="_form.ConfirmPassword" /><ValidationMessage For="() => _form.ConfirmPassword" /></div>
+        <button class="auth-primary" type="submit" disabled="@_busy"><span>@(_busy ? "در حال ساخت حساب…" : "ایجاد حساب کاربری")</span>@if (_busy) { <span class="auth-spinner" aria-hidden="true"></span> } else { <span aria-hidden="true">←</span> }</button>
+    </EditForm>
+    <p class="auth-switch">قبلاً ثبت‌نام کرده‌اید؟ <a href="/account/login">وارد حساب شوید</a></p>
+</AuthShell>
+
+@code {
+    private RegisterForm _form = new(); private bool _busy, _showPassword; private string? _error;
+    private string PasswordType => _showPassword ? "text" : "password";
+    private void TogglePassword() => _showPassword = !_showPassword;
+    private async Task SubmitAsync()
+    {
+        _busy = true; _error = null;
+        try
+        {
+            var result = await JS.InvokeAsync<AuthRequestResult>("madreseAuthRequest", "/api/account/register", new { _form.FullName, _form.Identifier, _form.Password, _form.ConfirmPassword });
+            if (result.Status is < 200 or >= 300) { _error = AuthPageErrors.Read(result.Body); return; }
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        catch { _error = "ثبت‌نام انجام نشد. لطفاً دوباره تلاش کنید."; }
+        finally { _busy = false; }
+    }
+
+    private sealed class RegisterForm
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "نام را وارد کنید.")]
+        [System.ComponentModel.DataAnnotations.StringLength(150, ErrorMessage = "نام حداکثر ۱۵۰ نویسه باشد.")]
+        public string FullName { get; set; } = "";
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "نشانی ایمیل را وارد کنید.")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "نشانی ایمیل معتبر نیست.")]
+        [System.ComponentModel.DataAnnotations.StringLength(254)] public string Identifier { get; set; } = "";
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "گذرواژه را وارد کنید.")]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 12, ErrorMessage = "گذرواژه باید بین ۱۲ تا ۱۲۸ نویسه باشد.")]
+        public string Password { get; set; } = "";
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "تکرار گذرواژه را وارد کنید.")]
+        [System.ComponentModel.DataAnnotations.Compare(nameof(Password), ErrorMessage = "تکرار گذرواژه یکسان نیست.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+    private sealed record AuthRequestResult(int Status, string Body);
+}

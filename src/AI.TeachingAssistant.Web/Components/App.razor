@@ -7,15 +7,39 @@
     <title>مدرس‌یار — دستیار هوشمند معلم</title>
     <base href="/" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="stylesheet" href="app.css?v=2" />
+    <link rel="stylesheet" href="app.css?v=3" />
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
-    <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+    <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: true)" />
 </head>
 
 <body>
-    <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+    <Routes @rendermode="new InteractiveServerRenderMode(prerender: true)" />
     <script src="_framework/blazor.web.js"></script>
     <script>
+        window.madreseAuthRequest = async function (url, payload) {
+            try {
+                const csrfResponse = await fetch('/api/account/csrf', { credentials: 'same-origin', cache: 'no-store' });
+                if (!csrfResponse.ok) return { status: csrfResponse.status, body: await csrfResponse.text() };
+                const csrf = await csrfResponse.json();
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrf.token) headers['X-CSRF-TOKEN'] = csrf.token;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: headers,
+                    body: payload === null ? null : JSON.stringify(payload)
+                });
+                return { status: response.status, body: await response.text() };
+            } catch {
+                return { status: 0, body: '' };
+            }
+        };
+
+        window.madreseLogout = async function () {
+            const result = await window.madreseAuthRequest('/api/account/logout', null);
+            return result.status;
+        };
+
         window.copyToClipboard = async function (text) {
             try {
                 await navigator.clipboard.writeText(text);

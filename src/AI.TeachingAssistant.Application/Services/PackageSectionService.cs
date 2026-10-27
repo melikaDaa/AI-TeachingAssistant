@@ -11,16 +11,18 @@ public class PackageSectionService
 {
     private readonly ILessonRepository _lessons;
     private readonly ITeachingPackageRepository _packages;
+    private readonly ICurrentTeacher _currentTeacher;
 
-    public PackageSectionService(ILessonRepository lessons, ITeachingPackageRepository packages)
+    public PackageSectionService(ILessonRepository lessons, ITeachingPackageRepository packages, ICurrentTeacher currentTeacher)
     {
         _lessons = lessons;
         _packages = packages;
+        _currentTeacher = currentTeacher;
     }
 
     public async Task<Result<TeachingPackage>> SaveSectionEditAsync(int lessonId, int sectionType, string payloadJson, CancellationToken ct = default)
     {
-        var lesson = await _lessons.GetByIdAsync(lessonId, includePackage: true, ct);
+        var lesson = await _lessons.GetForTeacherAsync(lessonId, _currentTeacher.TeacherId, includePackage: true, ct);
         if (lesson?.Package is null) return Result<TeachingPackage>.Failure("محتوای ذخیره‌شده‌ای برای این درس یافت نشد.");
         var package = lesson.Package;
 

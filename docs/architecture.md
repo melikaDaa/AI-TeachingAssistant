@@ -1,10 +1,10 @@
 # Architecture
 
-> مستند بر اساس کد واقعی در تاریخ 2026-09-27. هر چیز پیاده‌نشده صریحاً «Not implemented» شده است.
+> این سند شامل یادداشت‌های تاریخی است؛ جزئیات جاری باید با کد همان revision تطبیق داده شوند.
 
 ## Overview
 
-پروژه ASP.NET Core 9 با Clean Architecture در ۵ لایه. UI (Blazor Server) و REST API در **یک پروسه** اجرا می‌شوند (`Web/Program.cs` کنترلرهای اسمبلی Api را با `AddApplicationPart` ثبت می‌کند) تا کل MVP با یک `dotnet run` بالا بیاید. پروژه `Api` یک `Program.cs` مستقل هم دارد (Swagger + CORS برای 5173) برای اجرای جداگانه API.
+پروژه ASP.NET Core 9 با Clean Architecture در پنج پروژه. مسیر اصلی اجرا و Docker میزبان Web است که UI و کنترلرهای REST را در یک فرایند میزبانی می‌کند (`Web/Program.cs`). پروژه Api نیز entry point مستقل با Swagger/CORS در Development دارد؛ وجود آن به‌تنهایی به معنی پشتیبانی رسمی از استقرار جداگانه نیست.
 
 ## Technology Stack
 
@@ -16,7 +16,7 @@
 
 ## Frontend Architecture
 
-- **Framework:** Blazor Server — `InteractiveServerRenderMode(prerender: false)` در `src/AI.TeachingAssistant.Web/Components/App.razor`
+- **Framework:** Blazor Server — `InteractiveServerRenderMode(prerender: true)` برای Routes و HeadOutlet در `src/AI.TeachingAssistant.Web/Components/App.razor`
 - **Routing:** `Components/Routes.razor` (Router + `FocusOnNavigate Selector="h1"`)؛ مسیرها: `/`, `/lessons/new`, `/lessons`, `/lessons/{id:int}`, `/profile`
 - **Pages:** `Index.razor` (Home), `NewLesson.razor` (ویزار ۲ مرحله‌ای), `Lessons.razor`, `LessonDetail.razor`, `Profile.razor`
 - **Shared:** `TeachingPackageView.razor` (تب‌ها/progress/کپی/ویرایش/regenerate + polling)، `PromptCard.razor`، ویوهای ۴ بخش (`LessonPlanView`, `EducationalContentView`, `ActivityView`, `QuizView`)
@@ -29,17 +29,17 @@
 
 ## Backend Architecture
 
-- **Controllers:** `Api/Controllers/LessonsController.cs` (CRUD + generate + save section)، `Api/Controllers/TeacherController.cs` — نازک؛ فقط orchestration
+- **Controllers:** کنترلرهای lessons، teacher، account، usage و images — نازک؛ منطق اصلی در سرویس‌هاست. Web همان اسمبلی Api را میزبانی می‌کند.
 - **Services (Application):**
   - `LessonService` — CRUD درس + `ValidateLesson` (پیام‌های فارسی) + `NormalizeSections`
-  - `TeacherService` — پروفایل معلم پیش‌فرض
+  - `TeacherService` — پروفایل معلم جاری از context احراز‌شده
   - `SectionGenerationService` — الگوی عمومی prompt → AI → parse → validate (۲ تلاش) → map به دامنه، برای هر ۶ بخش
   - `GenerationCoordinator` — تولید یک بخش یا کل بسته؛ وضعیت Lesson/Package و `CompletedSections` را مدیریت می‌کند
   - `PackageSectionService` — ذخیره ویرایش معلم با اعتبارسنجی مجدد
 - **Middleware:** `ErrorHandlingMiddleware` — ValidationException→400 فارسی، هر چیز دیگر→500 «خطای غیرمنتظره‌ای پیش آمد»
 - **Validation:** دو لایه — `LessonService.ValidateLesson` (درخواست‌ها) و `AiResponseValidator` (خروجی AI: تعداد سوالات، کلید درون گزینه‌ها، پیوستگی زمان‌بندی طرح درس با `LessonPlanModel.HasRealisticSchedule`، ...)
 - **DTOs:** همه در `Application/Dtos/Dtos.cs` (`CreateLessonRequest`, `UpdateLessonRequest`, `LessonSummaryDto`, `TeachingPackageDto`, `QuestionDto`, ...) — entity هرگز از API خارج نمی‌شود (`DtoMapper`)
-- **Rate limiting:** پالیسی `ai` (20/min) روی endpointهای generate، `general` (200/min) روی کل کنترلرها — فقط در پروژه Api standalone تعریف شده؛ در میزبانی یکپارچه از Web این rate limiter ثبت نمی‌شود (Technical Debt)
+- **Rate limiting:** Web میزبان policyهای `ai` (20/min)، `general` (200/min) و `auth` (10/min) دارد؛ API standalone تنظیمات جداگانه‌ای دارد. دو pipeline را یکسان فرض نکنید.
 
 ## Data Access
 
@@ -50,12 +50,12 @@
 
 ## Database
 
-- **Provider:** SQLite (connection string `Data Source=madreseai.db`) — PostgreSQL نه
+- **Provider:** SQLite؛ runtime از `ConnectionStrings:Default` و در نبود آن از `Data Source=madreseai.db` استفاده می‌کند. Design-time factory connection string ثابت جداگانه دارد؛ این دو مسیر الزاماً یک DB را هدف نمی‌گیرند.
 - **Entities (Domain/Entities):** `Teacher`, `Lesson` (شامل `PackageStatus`, `RequestedSections`, `LastError`), `TeachingPackage` (`CompletedSections`), `LessonPlan`, `EducationalContent`, `ClassroomActivity`, `Quiz`, `MediaPrompt` (Kind: Image/Video)
 - **Value/Model:** `GenerationProgress`، مدل‌های payload در `Domain/Models/` (`LessonPlanModel`, `EducationalContentModel`, `ActivityModel`, `QuizModel`/`QuestionModel`, `ImagePromptModel`, `VideoPromptModel`)
 - **Relationships:** Teacher 1→* Lesson (cascade)؛ Lesson 1↔1 TeachingPackage (cascade)؛ Package 1↔1 هر بخش (cascade)؛ Package 1→* MediaPrompts (cascade). ایندکس‌ها: `IX_Lessons_TeacherId_CreatedAt` و unique index روی FK هر بخش
-- **Migrations:** دو migration — `Infrastructure/Migrations/20260926084831_InitialCreate.cs` و `20261008000000_SmartClassBriefFields.cs`
-- **Seed:** `DatabaseInitializer.InitializeAsync` — در استارتاپ: migrate + درج معلم دمو «مریم احمدی» و دو درس نمونه («سلول چیست؟» draft با ۶ بخش، «زنجیره غذایی» draft با ۳ بخش) فقط اگر جدول خالی باشد
+- **Migrations:** EF Core migrations در `Infrastructure/Migrations/`؛ از تعداد ثابت در این سند اجتناب شود، چون migrationهای محلی ممکن است هنوز در نسخه قابل انتشار نباشند.
+- **Startup:** هر دو entry point فعلی `DatabaseInitializer.InitializeAsync` را فراخوانی می‌کنند؛ initializer فقط `MigrateAsync` اجرا می‌کند و demo data درج نمی‌کند. اجرای میزبان روی DB انتخاب‌شده می‌تواند schema را تغییر دهد.
 - فایل db در `.gitignore` است
 
 ## API Structure
@@ -63,16 +63,24 @@
 | Method | Route | رفتار |
 | ------ | ----- | ----- |
 | POST | `/api/lessons` | ایجاد درس (validation فارسی) → 201 + `LessonSummaryDto` |
-| GET | `/api/lessons` | لیست درس‌های معلم پیش‌فرض (جدید→قدیم) |
+| GET | `/api/lessons` | فهرست درس‌های معلم احراز‌شده (جدید→قدیم) |
 | GET | `/api/lessons/{id}` | `TeachingPackageDto` کامل (شامل `progress` و `requestedSections`) |
 | PUT | `/api/lessons/{id}` | ویرایش مشخصات درس |
 | DELETE | `/api/lessons/{id}` | حذف آبشاری درس+بسته → 204 |
 | POST | `/api/lessons/{id}/generate` | صف تولید بخش‌های `RequestedSections` → 202 |
 | POST | `/api/lessons/{id}/generate/{section}` | صف تولید مجدد فقط آن بخش (`lesson-plan`, `content`, `activity`, `quiz`, `image-prompt`, `video-prompt`) → 202 |
 | PUT | `/api/lessons/{id}/sections/{section}` | ذخیره ویرایش JSON بخش‌های ۱–۴ → `TeachingPackageDto` |
-| GET/PUT | `/api/teacher` | پروفایل معلم پیش‌فرض |
+| GET/PUT | `/api/teacher` | پروفایل معلم احراز‌شده |
+| POST | `/api/account/register`, `/api/account/login` | ثبت‌نام/ورود؛ CSRF و rate limit |
+| GET/POST | `/api/account/csrf`, `/api/account/logout` | دریافت token ضد CSRF / خروج |
+| GET | `/api/usage` | خلاصه مصرف معلم احراز‌شده |
+| GET | `/api/images/{fileName}` | خواندن تصویر ذخیره‌شده؛ anonymous |
+| GET | `/health/live` | liveness فرایند |
 
-Swagger: در اجرای standalone Api در Development فعال است (`Api/Program.cs`). Not exposed from the integrated Web host.
+مسیرهای lesson/teacher/usage به هویت معلم احراز‌شده محدودند. `GET /api/images/{fileName}` عمومی است؛ هر دارنده URL معتبر تصویر می‌تواند آن را دریافت کند.
+فایل‌های تصویر در `App_Data/generated-images` زیر application base directory ذخیره می‌شوند، مگر آنکه `AI_IMAGE_STORAGE_ROOT` تعیین شود. تولید تصویر نیز پیش‌فرض خاموش است و به تنظیمات provider/کلید نیاز دارد.
+
+Swagger در entry point مستقل Api فقط در Development فعال است (`Api/Program.cs`); در Web host یکپارچه ثبت نشده. API مستقل در کد وجود دارد، اما این سند آن را مسیر deploy رسمی اعلام نمی‌کند.
 
 ## Content Generation Architecture
 
@@ -80,7 +88,7 @@ Swagger: در اجرای standalone Api در Development فعال است (`Api/P
 UI «✨ ساخت محتوای کلاس» (NewLesson.razor)
    → POST /api/lessons           (LessonService.CreateAsync — validation + RequestedSections)
    → POST /api/lessons/{id}/generate
-        └─ GenerationJobQueue.Enqueue(id, ContentTypes.All)   [Channel درون‌حافظه]
+      └─ ثبت/صف job طبق implementation همان revision
    → GenerationJobWorker (BackgroundService، gate تک‌همزمانی)
         ├─ GeneratePackageAsync: به‌ترتیب برای هر بخشِ درخواستی GenerateSectionAsync
         └─ GenerateSectionAsync(lessonId, sectionType)
@@ -170,7 +178,7 @@ UI: GET /api/lessons/{id} هر ۱.۵s → progress → رندر تب‌ها از
 │        │  MadreseAIApiClient (HTTP loopback)        │        │ rate limit "ai"   │
 │        └───────────────────────────────────────────►│        │                   │
 │                                                     ▼        │                   │
-│                              GenerationJobQueue (Channel, in-memory)              │
+│                              Generation job queue (revision-dependent)             │
 │                                                     │                            │
 │                              GenerationJobWorker (BackgroundService)             │
 │                                                     ▼                            │
@@ -194,23 +202,23 @@ UI: GET /api/lessons/{id} هر ۱.۵s → progress → رندر تب‌ها از
 - **JSON-payload sections:** هر بخش به‌صورت `PayloadJson` ذخیره می‌شود تا تغییر schema بخش‌ها migration لازم نداشته باشد.
 - **Background queue:** تولید از HTTP جدا شده تا درخواست‌ها فوری 202 برگردند و UI با polling پیش برود.
 - **Persian-first errors:** هم model-state و هم middleware، پیام فارسی برمی‌گردانند؛ استک هرگز لو نمی‌رود.
-- **Authentication:** Not implemented — معلم پیش‌فرض seed می‌شود.
+- **Authentication:** ایمیل/گذرواژه و cookie در کد فعلی پیاده شده؛ recovery خودکار فعال نیست. جزئیات را با revision هدف تطبیق دهید.
 
 ## Known Technical Debt
 
 | # | Problem | Location | Impact | Suggested future direction |
 | - | ------- | -------- | ------ | -------------------------- |
-| 1 | Rate limiter و CORS فقط در `Api/Program.cs` تعریف شده‌اند؛ در میزبانی یکپارچه (Web) endpointهای generate بدون rate limit هستند | `src/AI.TeachingAssistant.Api/Program.cs` vs `src/AI.TeachingAssistant.Web/Program.cs` | سوءاستفاده/هزینه در اتصال AI واقعی | انتقال AddRateLimiter/CORS به `DependencyInjection` مشترک Infrastructure |
-| 2 | صف تولید in-memory و بدون durability؛ crash بین Enqueue و اجرا → درس در حالت generating قفل می‌ماند (بدون timeout/recovery) | `Infrastructure/Generation/GenerationJob.cs` | نیاز به intervention دستی DB در crash | پیاده‌سازی reclaim بر اساس UpdatedAt یا صف پایدار |
+| 1 | تنظیمات rate limiting و CORS در دو host جداگانه تعریف می‌شوند و ممکن است واگرا شوند | `src/AI.TeachingAssistant.Api/Program.cs` و `src/AI.TeachingAssistant.Web/Program.cs` | تفاوت رفتار بین hostها | تصمیم‌گیری درباره host رسمی و هم‌ترازسازی در تغییر مستقل |
+| 2 | وضعیت durability صف به revision و migrationهای موجود وابسته است | `Infrastructure/Generation/` و migrations | نسخه tracked و working tree ممکن است تفاوت داشته باشند | تثبیت دامنه انتشار پیش از ادعای durability |
 | 3 | `DtoMapper.ToPackageDto` به `GenerationCoordinator.ParseSections` (لایه Services) وابسته است — coupling Mapping→Services | `Application/Mapping/DtoMapper.cs` | تست و استفاده مجدد سخت‌تر | انتقال ParseSections به Domain/util مشترک |
 | 4 | header صفحه درس برای چیپ‌های خلاصه، جدا از package یک `GET /api/lessons` کامل می‌زند (فیلدهای Subject/Grade روی DTO بسته نیستند) | `Web/Components/Pages/LessonDetail.razor` | یک call اضافه per load | افزودن فیلدهای درس به `TeachingPackageDto` |
-| 5 | `Web/Program.cs` با `new HttpClient` مستقیم MadreseAIApiClient می‌سازد (نه IHttpClientFactory) | `src/AI.TeachingAssistant.Web/Program.cs` | socket churn جزئی؛ تست‌پذیری کمتر | `AddHttpClient<MadreseAIApiClient>` |
+| 5 | پل داخلی Web→API به secret مشترک HMAC نیاز دارد | `Web/Program.cs`, `InternalAssertionHandler`, API middleware | بدون secret، درخواست‌های داده UI موفق نمی‌شوند | پیکربندی secret از User Secrets/env؛ مقدار آن ثبت نشود |
 | 6 | ویرایش فقط برای بخش‌های ۱–۴؛ پرامپت تصویر/ویدئو فقط کپی | `PackageSectionService.cs` | محدودیت UX | تعمیم ValidateAndStore به MediaPrompt models |
-| 7 | دو Program.cs (Api و Web) تنظیمات موازی دارند (seed/migrate هر دو اجرا می‌کنند) — خطر واگرایی config | `Api/Program.cs`, `Web/Program.cs` | نگهداری دوگانه | استخراج host builder مشترک یا حذف host مستقل Api در MVP |
-| 8 | هیچ integration test برای HTTP pipeline (کنترلر/middleware) وجود ندارد؛ تست‌ها سرویس‌محورند | `src/AI.TeachingAssistant.Tests/` | ریسک رگرسیون در contract | WebApplicationTest با SQLite in-memory |
+| 7 | دو Program.cs (Api و Web) تنظیمات موازی دارند و هر دو startup migration اجرا می‌کنند — خطر واگرایی config | `Api/Program.cs`, `Web/Program.cs` | نگهداری دوگانه | استخراج host builder مشترک یا تثبیت یک host پشتیبانی‌شده |
+| 8 | پوشش تست HTTP pipeline باید جداگانه بررسی شود؛ تست سرویس به‌تنهایی پوشش کامل endpoint/middleware را ثابت نمی‌کند | `src/AI.TeachingAssistant.Tests/` | ریسک رگرسیون در contract | افزودن/مستندسازی تست HTTP در صورت نیاز |
 
 ## Future Architecture Direction
 
-- Real AI Provider: **Implemented — xKiro** (از طریق OpenAiCompatibleProvider)
+- Real AI Provider: **Implemented in code — xKiro** (از طریق OpenAiCompatibleProvider؛ فعال‌سازی تنظیم‌محور)
 - RAG / Teacher Knowledge Base: **Not implemented** (embeddings، vector DB، آپلود PDF — مرحله بعد)
-- صف پایدار/recovery؛ PostgreSQL؛ Authentication و Teacher-scoped data؛ Responses API به‌جای chat/completions (اختیاری)؛ structured output سخت‌گیرانه‌تر (response_format json_schema)
+- صف پایدار/recovery و Usage: وضعیت نسخه قابل انتشار را جداگانه تثبیت کنید؛ PostgreSQL؛ password recovery؛ Responses API به‌جای chat/completions (اختیاری)؛ structured output سخت‌گیرانه‌تر (response_format json_schema)

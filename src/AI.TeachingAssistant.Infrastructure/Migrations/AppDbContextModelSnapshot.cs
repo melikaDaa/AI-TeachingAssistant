@@ -15,7 +15,7 @@ namespace AI.TeachingAssistant.Infrastructure.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.20");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.21");
 
             modelBuilder.Entity("AI.TeachingAssistant.Domain.Entities.ClassroomActivity", b =>
                 {
@@ -71,6 +71,59 @@ namespace AI.TeachingAssistant.Infrastructure.Migrations
                     b.ToTable("EducationalContents");
                 });
 
+            modelBuilder.Entity("AI.TeachingAssistant.Domain.Entities.GenerationJobRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("FencingToken")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LeaseExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LessonId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OwnerId")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SectionType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TeacherId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "CreatedAtUtc");
+
+                    b.ToTable("GenerationJobs");
+                });
+
             modelBuilder.Entity("AI.TeachingAssistant.Domain.Entities.Lesson", b =>
                 {
                     b.Property<int>("Id")
@@ -78,6 +131,10 @@ namespace AI.TeachingAssistant.Infrastructure.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("AdditionalInstructions")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AvailableResources")
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -103,20 +160,16 @@ namespace AI.TeachingAssistant.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("StudentLevel")
-                        .IsRequired()
-                        .HasMaxLength(50)
+                    b.Property<string>("SessionStyle")
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("StudentCount")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("SessionStyle")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AvailableResources")
-                        .HasMaxLength(300)
+                    b.Property<string>("StudentLevel")
+                        .IsRequired()
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Subject")
@@ -208,6 +261,56 @@ namespace AI.TeachingAssistant.Infrastructure.Migrations
                     b.ToTable("MediaPrompts");
                 });
 
+            modelBuilder.Entity("AI.TeachingAssistant.Domain.Entities.PhoneVerificationChallenge", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ConsumedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsRegistration")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestIpHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PhoneNumber")
+                        .IsUnique()
+                        .HasFilter("\"ConsumedAt\" IS NULL");
+
+                    b.HasIndex("PhoneNumber", "CreatedAt");
+
+                    b.ToTable("PhoneVerificationChallenges");
+                });
+
             modelBuilder.Entity("AI.TeachingAssistant.Domain.Entities.Quiz", b =>
                 {
                     b.Property<int>("Id")
@@ -244,6 +347,10 @@ namespace AI.TeachingAssistant.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -254,9 +361,27 @@ namespace AI.TeachingAssistant.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Level")
                         .IsRequired()
                         .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PasswordResetExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PasswordResetTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(16)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Subjects")
@@ -273,6 +398,12 @@ namespace AI.TeachingAssistant.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("PhoneNumber")
+                        .IsUnique();
 
                     b.ToTable("Teachers");
                 });
@@ -303,6 +434,85 @@ namespace AI.TeachingAssistant.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("TeachingPackages");
+                });
+
+            modelBuilder.Entity("AI.TeachingAssistant.Domain.Entities.UsageEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CompletionTokens")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CostStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ImageCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsRateLimitedRequest")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsReservation")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LeaseExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OutcomeDetail")
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParentRequestKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PromptTokens")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ProviderCostMicros")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RequestKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Succeeded")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TeacherId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Units")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestKey")
+                        .IsUnique();
+
+                    b.HasIndex("TeacherId", "CreatedAtUtc");
+
+                    b.ToTable("UsageEvents");
                 });
 
             modelBuilder.Entity("AI.TeachingAssistant.Domain.Entities.ClassroomActivity", b =>
@@ -380,6 +590,15 @@ namespace AI.TeachingAssistant.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("AI.TeachingAssistant.Domain.Entities.UsageEvent", b =>
+                {
+                    b.HasOne("AI.TeachingAssistant.Domain.Entities.Teacher", null)
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AI.TeachingAssistant.Domain.Entities.Lesson", b =>

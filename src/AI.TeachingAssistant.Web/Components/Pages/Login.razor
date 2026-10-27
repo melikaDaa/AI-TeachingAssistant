@@ -1,0 +1,53 @@
+@page "/account/login"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@inject Microsoft.JSInterop.IJSRuntime JS
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>ورود به مدرس‌یار</PageTitle>
+<AuthShell>
+    <div class="auth-heading"><span class="auth-step">حساب کاربری</span><h1>دوباره به مدرس‌یار برگردید</h1><p>برای ادامه مسیر تدریس هوشمند وارد حساب خود شوید.</p></div>
+    @if (_error is not null) { <div class="auth-alert auth-alert-error" role="alert"><span class="auth-alert-symbol" aria-hidden="true">!</span><span>@_error</span></div> }
+    <EditForm Model="_form" FormName="account-login" OnValidSubmit="SubmitAsync" class="auth-form" aria-busy="@_busy">
+        <DataAnnotationsValidator />
+        <div class="auth-field"><label for="identifier">نشانی ایمیل</label><InputText id="identifier" class="auth-input" dir="ltr" autocomplete="email" placeholder="name@example.com" @bind-Value="_form.Identifier" /><ValidationMessage For="() => _form.Identifier" /></div>
+        <div class="auth-field"><div class="auth-label-row"><label for="password">گذرواژه</label></div><div class="auth-password"><InputText id="password" class="auth-input" type="@PasswordType" autocomplete="current-password" placeholder="گذرواژه خود را وارد کنید" @bind-Value="_form.Password" /><button type="button" class="auth-toggle" @onclick="TogglePassword" aria-pressed="@_showPassword" aria-label="@(_showPassword ? "پنهان کردن گذرواژه" : "نمایش گذرواژه")">@(_showPassword ? "پنهان" : "نمایش")</button></div><ValidationMessage For="() => _form.Password" /></div>
+        <button class="auth-primary" type="submit" disabled="@_busy"><span>@(_busy ? "در حال ورود…" : "ورود به حساب")</span>@if (_busy) { <span class="auth-spinner" aria-hidden="true"></span> } else { <span aria-hidden="true">←</span> }</button>
+    </EditForm>
+    <div class="auth-divider"><span>یا</span></div>
+    <p class="auth-switch">هنوز حساب نساخته‌اید؟ <a href="/account/register">ساخت حساب رایگان</a></p>
+</AuthShell>
+@code {
+    private LoginForm _form = new(); private bool _busy, _showPassword; private string? _error;
+    private string PasswordType => _showPassword ? "text" : "password";
+    private void TogglePassword() => _showPassword = !_showPassword;
+    protected override async Task OnInitializedAsync()
+    {
+        var query = System.Web.HttpUtility.ParseQueryString(new Uri(Navigation.Uri).Query);
+        _returnUrl = query["returnUrl"];
+        if ((await Authentication.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
+            Navigation.NavigateTo(SafeReturn(_returnUrl) ? _returnUrl! : "/", forceLoad: true);
+    }
+    private string? _returnUrl;
+    private static bool SafeReturn(string? value) => !string.IsNullOrWhiteSpace(value) && value.StartsWith('/') && !value.StartsWith("//") && !value.StartsWith("/\\");
+    private async Task SubmitAsync()
+    {
+        _busy = true; _error = null;
+        try
+        {
+            var result = await JS.InvokeAsync<AuthRequestResult>("madreseAuthRequest", "/api/account/login", new { _form.Identifier, _form.Password, RememberMe = true });
+            if (result.Status is < 200 or >= 300) { _error = result.Status is 401 or 403 ? "اطلاعات ورود درست نیست. دوباره بررسی و تلاش کنید." : AuthPageErrors.Read(result.Body); return; }
+            Navigation.NavigateTo(SafeReturn(_returnUrl) ? _returnUrl! : "/", forceLoad: true);
+        }
+        catch { _error = "ورود انجام نشد. لطفاً دوباره تلاش کنید."; }
+        finally { _busy = false; }
+    }
+    private sealed class LoginForm
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "نشانی ایمیل را وارد کنید.")]
+        public string Identifier { get; set; } = "";
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "گذرواژه را وارد کنید.")]
+        public string Password { get; set; } = "";
+    }
+    private sealed record AuthRequestResult(int Status, string Body);
+}

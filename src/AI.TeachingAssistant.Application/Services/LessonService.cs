@@ -13,17 +13,21 @@ public class LessonService
 
     private readonly ILessonRepository _lessons;
     private readonly ITeacherRepository _teachers;
+    private readonly ICurrentTeacher _currentTeacher;
 
-    public LessonService(ILessonRepository lessons, ITeacherRepository teachers)
+    public int CurrentTeacherId => _currentTeacher.TeacherId;
+
+    public LessonService(ILessonRepository lessons, ITeacherRepository teachers, ICurrentTeacher currentTeacher)
     {
         _lessons = lessons;
         _teachers = teachers;
+        _currentTeacher = currentTeacher;
     }
 
     public async Task<LessonSummaryDto> CreateAsync(CreateLessonRequest request, CancellationToken ct = default)
     {
         ValidateLesson(request.Title, request.Subject, request.Grade, request.Topic, request.DurationMinutes, request.StudentLevel);
-        var teacher = await _teachers.GetDefaultAsync(ct)
+        var teacher = await _teachers.GetByIdAsync(_currentTeacher.TeacherId, ct)
             ?? throw new ValidationException("ابتدا پروفایل معلم را تکمیل کنید.");
 
         var lesson = new Lesson
@@ -49,7 +53,7 @@ public class LessonService
 
     public async Task<List<LessonSummaryDto>> ListAsync(CancellationToken ct = default)
     {
-        var teacher = await _teachers.GetDefaultAsync(ct)
+        var teacher = await _teachers.GetByIdAsync(_currentTeacher.TeacherId, ct)
             ?? throw new ValidationException("ابتدا پروفایل معلم را تکمیل کنید.");
         var lessons = await _lessons.ListForTeacherAsync(teacher.Id, ct);
         return lessons.Select(l => l.ToSummaryDto()).ToList();
@@ -57,7 +61,7 @@ public class LessonService
 
     public async Task<LessonSummaryDto> UpdateAsync(int id, UpdateLessonRequest request, CancellationToken ct = default)
     {
-        var lesson = await _lessons.GetByIdAsync(id, includePackage: false, ct)
+        var lesson = await _lessons.GetForTeacherAsync(id, _currentTeacher.TeacherId, includePackage: false, ct)
             ?? throw new ValidationException("درس یافت نشد.");
         ValidateLesson(request.Title, request.Subject, request.Grade, request.Topic, request.DurationMinutes, request.StudentLevel);
 
@@ -78,7 +82,7 @@ public class LessonService
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        if (!await _lessons.DeleteAsync(id, ct))
+        if (!await _lessons.DeleteForTeacherAsync(id, _currentTeacher.TeacherId, ct))
             throw new ValidationException("درس یافت نشد.");
     }
 

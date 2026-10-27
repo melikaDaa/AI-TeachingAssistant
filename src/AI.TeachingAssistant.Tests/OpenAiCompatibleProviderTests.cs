@@ -3,6 +3,7 @@ using System.Text.Json;
 using AI.TeachingAssistant.Application.Common;
 using AI.TeachingAssistant.Infrastructure.Ai;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace AI.TeachingAssistant.Tests;
@@ -16,6 +17,15 @@ namespace AI.TeachingAssistant.Tests;
 /// </summary>
 public class OpenAiCompatibleProviderTests
 {
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public string Messages { get; private set; } = string.Empty;
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter) => Messages += formatter(state, exception) + "\n";
+    }
+
     /// <summary>Serves queued responses in order and records every request body it saw.</summary>
     private sealed class QueueHandler(params HttpResponseMessage[] responses) : HttpMessageHandler
     {
@@ -261,6 +271,26 @@ public class OpenAiCompatibleProviderTests
 
         Assert.True(ex.IsTransient);
         Assert.Equal(2, handler.RequestBodies.Count); // one primary + one fallback, nothing more
+    }
+
+    [Fact]
+    public async Task UpstreamErrorBody_IsNotWrittenToLogs()
+    {
+        const string sentinel = "provider-echoed-sensitive-value";
+        var handler = new QueueHandler(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+        {
+            Content = new StringContent(sentinel),
+        });
+        var logger = new CapturingLogger<OpenAiCompatibleProvider>();
+        var provider = new OpenAiCompatibleProvider(
+            new HttpClient(handler) { BaseAddress = new Uri("https://gateway.test/v1/") },
+            new OpenAiCompatibleOptions { ApiKey = "test-key", Model = "primary-model", TimeoutSeconds = 10 },
+            logger);
+
+        await Assert.ThrowsAsync<AiProviderException>(() => provider.CompleteAsync(new AiRequest("s", "u")));
+
+        Assert.DoesNotContain(sentinel, logger.Messages);
+        Assert.DoesNotContain("test-key", logger.Messages);
     }
 
     [Fact]

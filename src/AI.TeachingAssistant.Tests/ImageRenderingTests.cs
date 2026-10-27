@@ -32,6 +32,7 @@ public sealed class ImageRenderingTests : IDisposable
         _connection.Open();
 
         var services = new ServiceCollection();
+        services.AddScoped<ICurrentTeacher, TestCurrentTeacher>();
         services.AddDbContext<AppDbContext>(o => o.UseSqlite(_connection));
         services.AddSingleton<IAIProvider, MockAIProvider>();
         services.AddSingleton<IImageProvider>(new FakeImageProvider());
@@ -104,6 +105,7 @@ public sealed class ImageRenderingTests : IDisposable
     public async Task Disabled_provider_keeps_prompts_without_images()
     {
         var services = new ServiceCollection();
+        services.AddScoped<ICurrentTeacher, TestCurrentTeacher>();
         services.AddDbContext<AppDbContext>(o => o.UseSqlite(_connection));
         services.AddSingleton<IAIProvider, MockAIProvider>();
         services.AddSingleton<IImageProvider, DisabledImageProvider>();

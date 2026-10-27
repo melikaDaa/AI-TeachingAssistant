@@ -5,8 +5,8 @@ information, chooses content types, and receives a complete **Teaching Package**
 lesson plan, educational content, classroom activity, quiz, image prompts, and a
 video prompt — all in Persian, RTL-first.
 
-> This is the MVP. It intentionally avoids: chat UIs, marketplaces, analytics,
-> auth systems, PDF upload, and direct image/video tool integrations.
+> This MVP includes email/password sign-in with cookies. Password recovery,
+> PDF upload, RAG, and direct image/video tool integrations are not available.
 
 ## Quick start
 
@@ -15,22 +15,25 @@ dotnet run --project src/AI.TeachingAssistant.Web
 # → http://localhost:5000  (Persian RTL UI + REST API in one process)
 ```
 
-First run applies EF Core migrations automatically and seeds a demo teacher
-(مریم احمدی — علوم، هفتم) with sample lessons. The AI provider defaults to a
-deterministic offline mock, so the entire product works **without any API key**.
+Startup applies EF Core migrations to the configured SQLite database; it does not
+seed a demo teacher or lessons. Startup can change the selected database schema.
+For local UI data calls, configure `InternalAssertion:Secret` with User Secrets
+or an environment variable (`InternalAssertion__Secret`). Text generation uses
+an offline mock by default and needs no AI API key.
 
 ## Switching to a real AI provider
 
-Configuration comes from environment variables (never committed, §27):
+Configuration comes from environment variables; never commit secrets:
 
 ```bash
-AI_PROVIDER=openai          # default: mock
-AI_API_KEY=sk-...
-AI_BASE_URL=https://api.openai.com/v1   # any OpenAI-compatible endpoint
-AI_MODEL=gpt-4o-mini
+AI_PROVIDER=xkiro           # default: mock; `openai` is also accepted
+AI_API_KEY=<secret>         # or XKIRO_API_KEY
+# Optional: AI_BASE_URL, AI_MODEL, AI_FALLBACK_MODEL
 ```
 
-Any OpenAI-compatible gateway works (OpenAI, Azure-style, Iranian providers).
+The configured default Base URL, model, and optional fallback are in
+`src/AI.TeachingAssistant.Api/appsettings.json`. A fallback is used only when
+configured and the primary provider call fails transiently.
 
 ## Architecture
 
@@ -47,7 +50,7 @@ src/
   AI.TeachingAssistant.Api            REST controllers, error middleware,
                                       rate limiting
   AI.TeachingAssistant.Web            Persian RTL Blazor UI
-  AI.TeachingAssistant.Tests          xUnit tests (23)
+  AI.TeachingAssistant.Tests          xUnit test project
 ```
 
 Key design points:
@@ -58,8 +61,9 @@ Key design points:
   **validated** (contiguous lesson timing, exactly 5 MCQ + 3 short answers with
   valid answer keys, 2 image prompts, …) and retried once before failing gracefully.
 - **Sections are independent**: regenerating the quiz never touches other sections.
-- **Generation runs in the background** (channel + hosted worker); the API returns
-  `202` immediately and the UI polls the persisted progress.
+- **Generation runs in a background worker**; the API returns `202` and the UI
+  polls progress. Durability depends on the implementation included in the
+  particular source revision.
 - **Errors never leak internals**: global middleware returns friendly Persian
   messages only; API keys stay server-side.
 
@@ -76,17 +80,31 @@ POST   /api/lessons/{id}/generate/{section}   regenerate one section
 PUT    /api/lessons/{id}/sections/{section}   save teacher edits of a section
 GET    /api/teacher                     teacher profile
 PUT    /api/teacher                     update profile
+POST   /api/account/register            register and sign in
+POST   /api/account/login               sign in
+GET    /api/account/csrf                obtain antiforgery token
+POST   /api/account/logout              sign out
+GET    /api/usage                       current teacher's usage summary
+GET    /api/images/{fileName}           retrieve an image (anonymous)
+GET    /health/live                     process liveness
 ```
+
+Lesson, teacher, and usage calls are scoped to the authenticated teacher.
+Registration and login require an antiforgery token and are rate-limited. Image
+reads are public to anyone holding a valid image URL; they are not cookie-protected.
+Generated image files are stored under `App_Data/generated-images` beneath the
+application base directory by default; `AI_IMAGE_STORAGE_ROOT` overrides this path.
 
 `{section}` ∈ `lesson-plan | content | activity | quiz | image-prompt | video-prompt`
 
 ## Database
 
-SQLite (`madreseai.db`) for the MVP. Teacher → Lesson → TeachingPackage →
+SQLite (default `Data Source=madreseai.db`; override with
+`ConnectionStrings__Default`) for the MVP. Startup applies EF Core migrations
+and does not seed demo records. Teacher → Lesson → TeachingPackage →
 {LessonPlan, EducationalContent, ClassroomActivity, Quiz, MediaPrompt[]} with
-cascade deletes; generated payloads are stored as JSON. Moving to PostgreSQL
-later only requires swapping the EF provider in `DependencyInjection.cs` and
-regenerating migrations.
+cascade deletes; generated payloads are stored as JSON. PostgreSQL is not
+implemented; a provider change requires separate schema and migration review.
 
 ## Tests
 
@@ -94,13 +112,14 @@ regenerating migrations.
 dotnet test
 ```
 
-Covers: AI JSON extraction (fences, nested braces), response validation rules,
-input validation, section normalization, graceful AI-failure handling, and the
-mock provider's output passing all validators.
+Covers application/service behavior, AI parsing/validation and provider fallback,
+image generation/storage, authentication service behavior, and database, usage,
+and queue behavior where those tests exist in the source revision. This does not
+claim full HTTP-pipeline or browser E2E coverage.
 
 ## Demo scenario
 
-1. Open the dashboard → «ساخت محتوای جدید»
+1. Register or sign in, then open the dashboard → «ساخت محتوای جدید»
 2. Enter: علوم / هفتم / سلول / 60 دقیقه / متوسط
 3. Select «ساخت محتوای کامل کلاس» → «✨ تولید محتوا»
 4. Watch the progress steps → six tabs appear

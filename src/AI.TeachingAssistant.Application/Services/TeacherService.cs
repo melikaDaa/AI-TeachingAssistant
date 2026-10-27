@@ -9,12 +9,17 @@ namespace AI.TeachingAssistant.Application.Services;
 public class TeacherService
 {
     private readonly ITeacherRepository _teachers;
+    private readonly ICurrentTeacher _currentTeacher;
 
-    public TeacherService(ITeacherRepository teachers) => _teachers = teachers;
+    public TeacherService(ITeacherRepository teachers, ICurrentTeacher currentTeacher)
+    {
+        _teachers = teachers;
+        _currentTeacher = currentTeacher;
+    }
 
     public async Task<TeacherDto> GetAsync(CancellationToken ct = default)
     {
-        var teacher = await _teachers.GetDefaultAsync(ct)
+        var teacher = await _teachers.GetByIdAsync(_currentTeacher.TeacherId, ct)
             ?? throw new ValidationException("پروفایل معلم یافت نشد.");
         return teacher.ToDto();
     }
@@ -28,7 +33,7 @@ public class TeacherService
         if (string.IsNullOrWhiteSpace(request.Subjects)) throw new ValidationException("دروس تدریسی را وارد کنید.");
         if (string.IsNullOrWhiteSpace(request.TeachingStyle)) throw new ValidationException("سبک تدریس را انتخاب کنید.");
 
-        var teacher = await _teachers.GetDefaultAsync(ct)
+        var teacher = await _teachers.GetByIdAsync(_currentTeacher.TeacherId, ct)
             ?? throw new ValidationException("پروفایل معلم یافت نشد.");
 
         teacher.FullName = request.FullName.Trim();

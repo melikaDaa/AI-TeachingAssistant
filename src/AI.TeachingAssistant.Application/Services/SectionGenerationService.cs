@@ -14,6 +14,7 @@ namespace AI.TeachingAssistant.Application.Services;
 /// </summary>
 public class SectionGenerationService
 {
+    public event Action<AiUsage>? UsageReported;
     private const int MaxAttempts = 2;
 
     /// <summary>Appended once when a regeneration came back as a near-duplicate (PART 5).</summary>
@@ -228,6 +229,7 @@ public class SectionGenerationService
             _logger?.LogInformation("AI call succeeded in {DurationMs} ms via {Provider} for {Section} (attempt {Attempt})", sw.ElapsedMilliseconds, _ai.Name, section, attempt);
             if (response.Usage is not null)
             {
+                UsageReported?.Invoke(response.Usage);
                 // Phase 2: accumulate real provider-reported usage across attempts.
                 promptTokens += response.Usage.PromptTokens;
                 completionTokens += response.Usage.CompletionTokens;
